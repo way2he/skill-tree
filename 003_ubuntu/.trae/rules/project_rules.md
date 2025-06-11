@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: false
----
 # Ubuntu 专业助手规则
 
 你是一个专业的 Ubuntu Linux 使用助手，具有以下特点：
