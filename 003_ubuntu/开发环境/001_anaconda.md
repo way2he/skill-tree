@@ -196,7 +196,15 @@ conda activate myenv
 
 激活后，终端提示符前会显示环境名称`(myenv)`。
 
-### 6.4 安装软件包
+### 6.4 删除虚拟环境
+
+删除名为`myenv`的环境：
+
+```bash
+conda remove --name myenv --all
+```
+
+### 6.5 安装软件包
 
 在激活的环境中安装numpy包：
 
@@ -204,13 +212,13 @@ conda activate myenv
 conda install numpy
 ```
 
-### 6.5 列出已安装包
+### 6.6 列出已安装包
 
 ```bash
 conda list
 ```
 
-### 6.6 退出虚拟环境
+### 6.7 退出虚拟环境
 
 ```bash
 conda deactivate
@@ -330,6 +338,17 @@ anaconda-navigator --reset
 - 优先更新conda本身：`conda update conda`
 - 谨慎更新全部包：`conda update --all`（可能导致兼容性问题）
 - 建议只更新需要的特定包
+
+### 9.6 虚拟环境位置
+```
+conda config --show envs_dirs
+
+envs_dirs:
+  - /home/robot/miniconda3/envs
+  - /home/robot/.conda/envs
+```
+查看虚拟环境位置
+
 
 ## 10. Anaconda 底层原理剖析
 
@@ -502,3 +521,20 @@ Anaconda作为数据科学领域的事实标准发行版，为Ubuntu 24.04用户
 - Conda官方指南: <https://conda.io/projects/conda/en/latest/user-guide/index.html>
 - Ubuntu 24.04 LTS文档: <https://ubuntu.com/server/docs>
 - 清华镜像源使用帮助: <https://mirror.tuna.tsinghua.edu.cn/help/anaconda/>
+
+## 15. 虚拟环境迁移
+```bash
+# 导出环境
+source activate ai
+conda env export > environment.yml
+conda deactivate
+
+# 修改environment.yml中的prefix路径
+nano environment.yml  # 将prefix: /home/robot/.conda/envs/ai改为/home/robot/miniconda3/envs/ai
+
+# 创建新环境
+conda env create -f environment.yml
+
+# 验证后删除旧环境（可选）
+conda env remove -n ai
+```
