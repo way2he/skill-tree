@@ -107,6 +107,27 @@ conda list -n <env_name>        # 列出指定环境的所有包
 conda list <package>            # 查看指定包的信息
 ```
 
+### 4.3 查看安装包数量
+```bash
+# Windows系统：查看当前环境安装包数量
+conda list | find /c /v ""
+
+# Windows系统：查看指定环境安装包数量
+conda list -n <env_name> | find /c /v ""
+
+# Linux/Mac系统：查看当前环境安装包数量
+conda list | wc -l
+
+# Linux/Mac系统：查看指定环境安装包数量
+conda list -n <env_name> | wc -l
+```
+
+> 说明：
+> - `find /c /v ""` 是Windows命令，用于统计输出的行数
+> - `wc -l` 是Linux/Mac命令，用于统计输出的行数
+> - 由于conda list输出包含标题行，实际安装包数量为统计结果减2
+
+
 ### 4.3 更新与卸载包
 ```bash
 conda update <package>          # 更新指定包
