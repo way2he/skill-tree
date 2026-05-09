@@ -1,0 +1,158 @@
+# VS Code 安装 Claude Code | 菜鸟教程
+
+VS Code 安装 Claude Code  如果不喜欢使用 Claude Code 的命令行模型，我们可以在 VS Code 编辑器中安装 Claude Code。 打开 VS Code，进入扩展市场，搜索 Claude Code 安装：  安装完成后，点击右上角 Claude Code 图标，即可进入 Claude Code 页面：   这样有账号的可以使用 /login 登录：   也可以在对话框输入 /config 进入设置，..
+
+---
+
+# VS Code 安装 Claude Code
+
+### 使用提示框（聊天输入框）
+### 引用文件和文件夹（@ 提及功能）
+### 恢复过去的对话
+
+- 正常模式（默认）：Claude 每次要操作前都会先问你同不同意。
+- Plan Mode（计划模式）：Claude 先告诉你它打算怎么做，得到你批准后才动手修改。
+- 自动接受模式：Claude 直接编辑，不再每次询问。你也可以在 VS Code 设置里搜索claudeCode.initialPermissionMode来设置默认模式。
+
+- 选中代码时：直接在编辑器里选中一段代码，Claude 会自动看到你选中的部分。提示框下方会显示"已选中 XX 行"。
+- 快速插入：按Option + K（Mac）或Alt + K（Windows/Linux），就能插入带文件路径和行号的 @ 提及，例如@app.ts#5-10。
+- 隐藏选中内容：点击提示框底部的"选择指示器"（眼睛图标），斜杠眼睛表示 Claude 看不到你选中的文本。
+- 拖拽附件：把文件拖到提示框时按住Shift，可以作为附件添加。想删除附件？点击附件右上角的 × 即可。
+
+- 重命名：给对话起个好记的标题
+- 删除：把这条记录从列表里移除
+
+如果不喜欢使用 Claude Code 的命令行模型，我们可以在 VS Code 编辑器中安装 Claude Code。
+
+打开 VS Code，进入扩展市场，搜索Claude Code安装：
+
+安装完成后，点击右上角 Claude Code 图标，即可进入 Claude Code 页面：
+
+这样有账号的可以使用 /login 登录：
+
+也可以在对话框输入 /config 进入设置，勾选 Disable Login Prompt 配置来关闭登录页面:
+
+我们可以选中文件中的代码，让 Claude Code 帮我们解析说明或修改，选中后，会提示已经选中的代码行数：
+
+当 Claude 需要修改文件时，它会自动打开并排对比视图，左边显示文件原始内容，右边显示建议修改后的内容，然后询问您是否同意修改。
+
+提示框就是你和 Claude 聊天的地方，它功能很强大，以下是常用功能，一看就会用：
+
+1、权限模式：点击提示框底部的模式指示器，就可以切换权限模式。
+
+下方的"自定义"部分还能管理 MCP servers、hooks、记忆、权限和插件。
+
+带有终端图标的命令，会在 VS Code 的集成终端里直接打开。
+
+3、上下文用量指示器：提示框下方会实时显示你已经用了多少 Claude 的上下文窗口（context）。
+
+4、扩展思考（Extended Thinking）：遇到复杂问题时，可以让 Claude 多花点时间深度思考。
+
+5、多行输入：按Shift + Enter可以换行，不用立刻发送消息。
+
+在弹出的"其他"自由文本框里也同样适用。
+
+支持模糊匹配，不用打全名：
+
+PDF 大文件专属：你可以指定让 Claude 只读某几页，例如"第 1-10 页"或"从第 3 页开始"。
+
+点击 Claude Code 面板顶部的下拉菜单，就能看到你的所有聊天历史记录。
+
+支持关键字搜索，也能按时间筛选（今天、昨天、过去 7 天等）。
+
+点击任意一条记录，就能完整恢复之前的对话内容。
+
+鼠标悬停在某条记录上，会出现重命名和删除按钮：
+
+VS Code 安装 Claude Code
+如果不喜欢使用 Claude Code 的命令行模型，我们可以在 VS Code 编辑器中安装 Claude Code。
+打开 VS Code，进入扩展市场，搜索
+**Claude Code**
+![](https://www.runoob.com/wp-content/uploads/2025/12/cc-runoob-1.png)
+安装完成后，点击右上角 Claude Code 图标，即可进入 Claude Code 页面：
+![](https://www.runoob.com/wp-content/uploads/2025/12/cc-runoob-2.png)
+这样有账号的可以使用 /login 登录：
+![](https://www.runoob.com/wp-content/uploads/2025/12/cc-runoob-3.png)
+也可以在对话框输入 /config 进入设置，勾选 Disable Login Prompt 配置来关闭登录页面:
+![](https://www.runoob.com/wp-content/uploads/2025/12/cc-runoob-4.png)
+我们可以选中文件中的代码，让 Claude Code 帮我们解析说明或修改，选中后，会提示已经选中的代码行数：
+![](https://www.runoob.com/wp-content/uploads/2026/03/820b4038-e214-4105-8676-f833833961be.png)
+当 Claude 需要修改文件时，它会自动打开并排对比视图，左边显示文件原始内容，右边显示建议修改后的内容，然后询问您是否同意修改。
+![](https://www.runoob.com/wp-content/uploads/2026/03/vs-code-edits.png)
+使用提示框（聊天输入框）
+提示框就是你和 Claude 聊天的地方，它功能很强大，以下是常用功能，一看就会用：
+**1、权限模式**
+点击提示框
+**底部**
+的模式指示器，就可以切换权限模式。
+**正常模式**
+（默认）：Claude 每次要操作前都会先问你同不同意。
+**Plan Mode（计划模式）**
+：Claude 先告诉你它打算怎么做，得到你批准后才动手修改。
+**自动接受模式**
+：Claude 直接编辑，不再每次询问。
+你也可以在 VS Code 设置里搜索
+claudeCode.initialPermissionMode
+来设置默认模式。
+![](https://www.runoob.com/wp-content/uploads/2026/03/39e157b5-be94-4d52-b8bc-c4038c92cdbd.png)
+**2、命令菜单**
+在提示框里输入
+（或点击输入框）就能打开命令菜单。
+常用选项包括：附加文件、切换模型、开启扩展思考、查看使用量（输入
+/usage
+下方的"自定义"部分还能管理 MCP servers、hooks、记忆、权限和插件。
+**终端图标**
+的命令，会在 VS Code 的集成终端里直接打开。
+![](https://www.runoob.com/wp-content/uploads/2026/03/209fbcb3-d55e-4ad6-8065-c019ea719316.png)
+**3、上下文用量指示器**
+：提示框下方会实时显示你已经用了多少 Claude 的上下文窗口（context）。
+Claude 会自动帮你压缩内容；如果你想手动压缩，输入
+/compact
+**4、扩展思考（Extended Thinking）**
+：遇到复杂问题时，可以让 Claude 多花点时间深度思考。
+通过命令菜单（输入
+）切换开启/关闭。
+**5、多行输入**
+**Shift + Enter**
+可以换行，不用立刻发送消息。
+在弹出的"其他"自由文本框里也同样适用。
+引用文件和文件夹（@ 提及功能）
+想让 Claude 看懂你的代码？直接用
+提到文件或文件夹就行！
+后面跟文件名或文件夹名，Claude 就会自动读取内容，可以回答问题或直接修改。
+![](https://www.runoob.com/wp-content/uploads/2026/03/1185e7bb-9cb4-4f1e-a9d0-b75cf1a447a8.png)
+**模糊匹配**
+，不用打全名：
+解释一下 @auth 的逻辑（会自动匹配 auth.js、AuthService.ts 等）
+@src/components/ 里有什么？（文件夹要加斜杠 / ）
+**超实用小技巧**
+**选中代码时**
+：直接在编辑器里选中一段代码，Claude 会自动看到你选中的部分。提示框下方会显示"已选中 XX 行"。
+**快速插入**
+**Option + K**
+（Mac）或
+**Alt + K**
+（Windows/Linux），就能插入带文件路径和行号的 @ 提及，例如
+@app.ts#5-10
+**隐藏选中内容**
+：点击提示框底部的"选择指示器"（眼睛图标），斜杠眼睛表示 Claude 看不到你选中的文本。
+**拖拽附件**
+：把文件拖到提示框时按住
+**Shift**
+，可以作为附件添加。
+想删除附件？点击附件右上角的 × 即可。
+**PDF 大文件专属**
+：你可以指定让 Claude 只读某几页，例如"第 1-10 页"或"从第 3 页开始"。
+恢复过去的对话
+点击 Claude Code 面板
+**顶部**
+的下拉菜单，就能看到你的所有聊天历史记录。
+**关键字搜索**
+，也能按时间筛选（今天、昨天、过去 7 天等）。
+点击任意一条记录，就能完整恢复之前的对话内容。
+鼠标悬停在某条记录上，会出现
+**重命名**
+**删除**
+重命名：给对话起个好记的标题
+删除：把这条记录从列表里移除
+![](https://www.runoob.com/wp-content/uploads/2026/03/de8cd93b-fb36-4abc-aca3-ce289227fa90.png)
