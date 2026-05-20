@@ -1,0 +1,50 @@
+{
+  "overall_score": 45,
+  "summary": "代码存在严重的安全漏洞和多个质量问题，需要立即修复SQL注入问题。",
+  "issues": [
+    {
+      "severity": "Critical",
+      "category": "Security",
+      "line_number": 7,
+      "description": "存在SQL注入漏洞，用户输入直接拼接到SQL语句中",
+      "suggestion": "使用参数化查询防止SQL注入",
+      "code_before": "query = \"SELECT * FROM users WHERE id = \" + str(user_id)",
+      "code_after": "query = \"SELECT * FROM users WHERE id = ?\"\n    cursor.execute(query, (user_id,))"
+    },
+    {
+      "severity": "High",
+      "category": "Performance",
+      "line_number": 14,
+      "description": "去重算法时间复杂度为O(n²)，大数据量时性能极差",
+      "suggestion": "使用set进行去重，时间复杂度降为O(n)",
+      "code_before": "unique_items = []\n    for item in items:\n        if item not in unique_items:\n            unique_items.append(item)",
+      "code_after": "unique_items = list(set(items))  # 如果需要保持顺序：list(dict.fromkeys(items))"
+    },
+    {
+      "severity": "High",
+      "category": "Bug",
+      "line_number": 21,
+      "description": "除法操作没有处理除数为0的情况",
+      "suggestion": "添加异常处理或前置检查",
+      "code_before": "return a / b",
+      "code_after": "if b == 0:\n        raise ValueError(\"除数不能为0\")\n    return a / b"
+    },
+    {
+      "severity": "Medium",
+      "category": "Maintainability",
+      "line_number": 25,
+      "description": "函数名calc过于简短，缺少文档字符串",
+      "suggestion": "使用描述性函数名并添加文档字符串",
+      "code_before": "def calc(x, y):",
+      "code_after": "def multiply_numbers(x: float, y: float) -> float:\n    \"\"\"计算两个数的乘积。\n    \n    Args:\n        x: 第一个乘数\n        y: 第二个乘数\n    \n    Returns:\n        两数相乘的结果\n    \"\"\""
+    }
+  ],
+  "positive_aspects": [
+    "代码结构清晰，函数职责单一",
+    "使用了类型转换str(user_id)，说明有基本的安全意识"
+  ],
+  "learning_resources": [
+    "OWASP Top 10: https://owasp.org/www-project-top-ten/",
+    "Python性能优化指南: https://wiki.python.org/moin/PythonSpeed"
+  ]
+}
