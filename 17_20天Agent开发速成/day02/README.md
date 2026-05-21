@@ -1,16 +1,15 @@
 ---
 name: Day02 - Prompt工程精通 + 过拟合与正则化（面试高频考点）
-description: Day02 完整学习计划：每天8小时，精确到分钟，每个知识点对应面试考点，ML基础与Agent应用结合
+description: Day02 完整学习计划：精确到分钟，每个知识点对应面试考点，ML基础与Agent应用结合
 type: learning
 tags: ["Prompt工程", "过拟合", "正则化", "面试", "CoT", "Few-shot"]
 created_at: 2026-05-20
 updated_at: 2026-05-21
-version: v3.0-interview
+version: interview
 ---
 
 # 🚀 Day 02：Prompt 工程精通 + 过拟合与正则化（面试高频考点）
 
-> ⚠️ **面试强化版 v3.0**
 > **学习日期**：第 2 天 / 共 20 天
 > **学习时长**：8 小时（精确到分钟）
 > **核心目标**：任意需求能写出高质量系统提示词，能控制大模型稳定输出JSON，理解机器学习中的过拟合概念并直接应用在Prompt优化上

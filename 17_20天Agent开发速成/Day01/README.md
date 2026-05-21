@@ -1,16 +1,15 @@
 ---
 name: Day01 - Python异步编程深度（面试高频考点）
-description: Day01 完整学习计划：每天8小时，精确到分钟，每个知识点对应面试考点，代码实战+面试话术一条龙
+description: Day01 完整学习计划：精确到分钟，每个知识点对应面试考点，代码实战+面试话术一条龙
 type: learning
 tags: ["Python", "异步编程", "aiohttp", "面试", "并发控制"]
 created_at: 2026-05-19
 updated_at: 2026-05-21
-version: v3.0-interview
+version: interview
 ---
 
 # 🚀 Day 01：Python 异步编程深度（面试高频考点）
 
-> ⚠️ **面试强化版 v3.0**
 > **学习日期**：第 1 天 / 共 20 天
 > **学习时长**：8 小时（精确到分钟）
 > **核心目标**：闭着眼写出带并发控制、超时、重试的异步请求函数，所有异步面试题全部搞定
