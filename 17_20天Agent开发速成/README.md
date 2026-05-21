@@ -129,7 +129,7 @@ pip install -e .
 
 **验收标准**：能闭着眼写出带并发控制、超时、重试的异步请求函数
 
-**学习文件**：[day01/README.md](file:///c:/Users/robotAi/Documents/ClawWorksapce/knowledge-base/raw/skill-tree/17_20天Agent开发速成/day01/README.md)
+**学习文件**：[day01/README.md](day01/README.md)
 
 ---
 
@@ -143,7 +143,7 @@ pip install -e .
 
 **验收标准**：任意需求能写出高质量 Prompt，能说出 5 种提示注入防护方法
 
-**学习文件**：[day02/README.md](file:///c:/Users/robotAi/Documents/ClawWorksapce/knowledge-base/raw/skill-tree/17_20天Agent开发速成/day02/README.md)
+**学习文件**：[day02/README.md](day02/README.md)
 
 ---
 

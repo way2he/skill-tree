@@ -10,9 +10,9 @@ Day02 必写代码 1：角色设定方法论
 - 角色设定能让输出质量提升多少？
 """
 
-from openai import OpenAI
-
-client = OpenAI(api_key="your-api-key")
+import sys
+sys.path.append("..")
+from llm.openai import chat_completion, get_response_content
 
 
 # ============================================================
@@ -82,15 +82,12 @@ def get_user(user_id):
 
 def review_code(system_prompt: str, code: str) -> str:
     """用指定的 system prompt 审查代码"""
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"请审查这段代码：\n{code}"}
-        ],
-        temperature=0.3,  # 降低随机性
-    )
-    return response.choices[0].message.content
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"请审查这段代码：\n{code}"}
+    ]
+    response = chat_completion(model="gpt-3.5-turbo", messages=messages, temperature=0.3)
+    return get_response_content(response)
 
 
 def compare_prompts():

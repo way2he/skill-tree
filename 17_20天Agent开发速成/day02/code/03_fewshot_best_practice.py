@@ -11,9 +11,9 @@ Day02 必写代码 3：Few-shot Learning 最佳实践
 - 零样本 / 单样本 / 少样本的边界？
 """
 
-from openai import OpenAI
-
-client = OpenAI(api_key="your-api-key")
+import sys
+sys.path.append("..")
+from llm.openai import chat_completion, get_response_content
 
 
 # ============================================================
@@ -86,11 +86,9 @@ def fewshot_with_n_examples(n: int, text: str) -> str:
 问题：{text}
 答案："""
     
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.choices[0].message.content
+    messages = [{"role": "user", "content": prompt}]
+    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
+    return get_response_content(response)
 
 
 # ============================================================

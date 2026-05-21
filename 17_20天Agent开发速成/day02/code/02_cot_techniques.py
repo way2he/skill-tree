@@ -11,9 +11,9 @@ Day02 必写代码 2：思维链 CoT (Chain of Thought)
 - CoT 的副作用是什么？
 """
 
-from openai import OpenAI
-
-client = OpenAI(api_key="your-api-key")
+import sys
+sys.path.append("..")
+from llm.openai import chat_completion, get_response_content
 
 
 # ============================================================
@@ -26,11 +26,9 @@ def cot_zero_shot(question: str) -> str:
 
 请你一步步思考，先列出已知条件，再分析未知量，最后给出答案。
 """
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.choices[0].message.content
+    messages = [{"role": "user", "content": prompt}]
+    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
+    return get_response_content(response)
 
 
 # ============================================================
@@ -58,11 +56,9 @@ def cot_few_shot(question: str) -> str:
 现在请按同样的格式解答：
 问题：{question}
 """
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.choices[0].message.content
+    messages = [{"role": "user", "content": prompt}]
+    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
+    return get_response_content(response)
 
 
 # ============================================================
@@ -74,16 +70,13 @@ def cot_self_consistency(question: str, n: int = 5) -> dict:
     
     answers = []
     for i in range(n):
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{
-                "role": "user",
-                "content": f"{question}\n\n一步步思考，给出最终答案。"
-            }],
-            temperature=0.9,  # 高温度，让答案多样
-        )
+        messages = [{
+            "role": "user",
+            "content": f"{question}\n\n一步步思考，给出最终答案。"
+        }]
+        response = chat_completion(model="gpt-3.5-turbo", messages=messages, temperature=0.9)
         # 这里简化：取最后一行作为答案
-        text = response.choices[0].message.content
+        text = get_response_content(response)
         answers.append(text.split("\n")[-1].strip())
     
     # 取出现次数最多的答案
@@ -123,14 +116,12 @@ DECOMPOSITION_PROMPT = """
 
 def cot_decomposition(question: str) -> str:
     """分步求解：复杂任务先拆解再综合"""
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": DECOMPOSITION_PROMPT},
-            {"role": "user", "content": question}
-        ],
-    )
-    return response.choices[0].message.content
+    messages = [
+        {"role": "system", "content": DECOMPOSITION_PROMPT},
+        {"role": "user", "content": question}
+    ]
+    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
+    return get_response_content(response)
 
 
 # ============================================================

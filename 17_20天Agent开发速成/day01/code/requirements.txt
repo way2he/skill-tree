@@ -1,0 +1,9 @@
+# Day01 - Python 异步编程依赖
+# Python 3.12+
+
+# 异步 HTTP 客户端（核心依赖）
+aiohttp>=3.9.0
+
+# 可选：用于类型检查（开发环境）
+# mypy>=1.8.0
+# types-requests>=2.31.0

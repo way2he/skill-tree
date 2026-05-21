@@ -11,9 +11,9 @@ Day02 必写代码 5：提示注入攻击与防护
 """
 
 import re
-from openai import OpenAI
-
-client = OpenAI(api_key="your-api-key")
+import sys
+sys.path.append("..")
+from llm.openai import chat_completion, get_response_content
 
 
 # ============================================================

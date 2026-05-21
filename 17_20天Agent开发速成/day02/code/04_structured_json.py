@@ -12,10 +12,10 @@ Day02 必写代码 4：JSON 结构化输出 100% 稳定方案
 """
 
 import json
-from openai import OpenAI
+import sys
+sys.path.append("..")
 from pydantic import BaseModel, Field
-
-client = OpenAI(api_key="your-api-key")
+from llm.openai import chat_completion, get_response_content, get_tool_call_args
 
 
 # ============================================================
@@ -31,11 +31,9 @@ def get_json_v1_prompt_only(query: str) -> dict:
 
 文本：{query}
 """
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-    )
-    text = response.choices[0].message.content
+    messages = [{"role": "user", "content": prompt}]
+    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
+    text = get_response_content(response)
     
     # 需要手动清洗（容易失败）
     text = text.strip().replace("```json", "").replace("```", "")
@@ -50,15 +48,16 @@ def get_json_v1_prompt_only(query: str) -> dict:
 # ============================================================
 def get_json_v2_response_format(query: str) -> dict:
     """方案 2：用 OpenAI 的 JSON Mode（必须在 prompt 里也提到 JSON）"""
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo-1106",  # 必须是支持 JSON Mode 的版本
-        messages=[
-            {"role": "system", "content": "你必须返回有效的 JSON。"},
-            {"role": "user", "content": f"提取人物信息（JSON）：{query}"}
-        ],
-        response_format={"type": "json_object"},  # ⭐ 关键参数
+    messages = [
+        {"role": "system", "content": "你必须返回有效的 JSON。"},
+        {"role": "user", "content": f"提取人物信息（JSON）：{query}"}
+    ]
+    response = chat_completion(
+        model="gpt-3.5-turbo-1106",
+        messages=messages,
+        response_format={"type": "json_object"}
     )
-    return json.loads(response.choices[0].message.content)
+    return json.loads(get_response_content(response))
 
 
 # ============================================================
@@ -78,22 +77,24 @@ def get_json_v3_pydantic(query: str) -> Person:
     # Pydantic 模型自动转 JSON Schema
     schema = Person.model_json_schema()
     
-    response = client.chat.completions.create(
+    messages = [{"role": "user", "content": f"提取信息：{query}"}]
+    tools = [{
+        "type": "function",
+        "function": {
+            "name": "extract_person",
+            "description": "提取人物信息",
+            "parameters": schema,
+        }
+    }]
+    response = chat_completion(
         model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": f"提取信息：{query}"}],
-        tools=[{
-            "type": "function",
-            "function": {
-                "name": "extract_person",
-                "description": "提取人物信息",
-                "parameters": schema,
-            }
-        }],
-        tool_choice={"type": "function", "function": {"name": "extract_person"}},
+        messages=messages,
+        tools=tools,
+        tool_choice={"type": "function", "function": {"name": "extract_person"}}
     )
     
     # 拿到结构化结果
-    args = response.choices[0].message.tool_calls[0].function.arguments
+    args = get_tool_call_args(response)
     return Person.model_validate_json(args)  # 自动校验！
 
 

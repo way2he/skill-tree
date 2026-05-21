@@ -9,10 +9,11 @@
 | 03_fewshot_best_practice.py | Few-shot 最佳实践 |
 | 04_structured_json.py | JSON 结构化输出 100% 稳定方案 |
 | 05_prompt_injection.py | 提示注入攻击与防护 |
+| 06_overfit_regularization.py | 欠拟合/过拟合 + L1/L2/Dropout/Early Stopping/Data Aug（ML 实验 + Prompt 工程映射） |
 
 ## 学习顺序
 
-01 -> 02 -> 03 -> 04 -> 05
+01 -> 02 -> 03 -> 04 -> 05 -> 06
 
 ## 每个代码文件的学习要点
 
@@ -37,6 +38,12 @@
 ### 05_prompt_injection.py
 - 5 种攻击：覆盖、角色扮演、编码、数据注入、间接注入
 - 5 层防护：输入过滤 + Prompt 加固 + 数据隔离 + 输出过滤 + 多 Agent
+
+### 06_overfit_regularization.py
+- 一份代码同时演示：欠拟合、过拟合、L1、L2、Dropout、Early Stopping、Data Augmentation
+- 每一种 ML 正则化都给出 Prompt 工程 1:1 对照表与 before/after
+- 面试金句：L1=删废话、L2=不走极端、Dropout=示例多样化、Early Stopping=约束够了就停、Data Aug=覆盖边界示例
+- 依赖：torch（未装也能跑后半段映射/Prompt 演示）
 
 ## 面试必背
 
