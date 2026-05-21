@@ -1,642 +1,436 @@
 ---
-name: Python异步编程与aiohttp并发控制
-description: 第1天学习内容：async/await基础、aiohttp使用、信号量并发控制、超时重试机制
-type: tutorial
-tags: ["Python", "异步编程", "aiohttp", "并发控制", "Agent开发"]
+name: Day01 - Python异步编程深度（面试高频考点）
+description: Day01 完整学习计划：每天8小时，精确到分钟，每个知识点对应面试考点，代码实战+面试话术一条龙
+type: learning
+tags: ["Python", "异步编程", "aiohttp", "面试", "并发控制"]
 created_at: 2026-05-19
-updated_at: 2026-05-19
+updated_at: 2026-05-21
+version: v3.0-interview
 ---
 
-# 🚀 Day 01：Python 异步编程与 aiohttp 并发控制
+# 🚀 Day 01：Python 异步编程深度（面试高频考点）
 
-> 💯 完整学习指南：学习目标 → 核心概念 → 代码实战 → 原理理解 → 验收标准
-
-## 📅 学习日期：2026-05-19
-## ⏱️ 预计学习时间：2-3 小时
-
----
-
-## 🎯 今日学习目标
-
-1. 理解异步编程核心概念
-2. 掌握 async/await 语法
-3. 学会使用 aiohttp 发送异步 HTTP 请求
-4. 用信号量实现并发控制
-5. 实现超时机制与指数退避重试
+> ⚠️ **面试强化版 v3.0**
+> **学习日期**：第 1 天 / 共 20 天
+> **学习时长**：8 小时（精确到分钟）
+> **核心目标**：闭着眼写出带并发控制、超时、重试的异步请求函数，所有异步面试题全部搞定
 
 ---
 
-## 📚 核心概念
+## ⏰ 今日学习时间表（精确到分钟）
 
-### 1. 异步编程三要素
-
-| 概念 | 说明 | 类比 |
-|------|------|------|
-| **协程 (Coroutine)** | 可以暂停和恢复的函数，用 `async def` 定义 | 你烧水时去切菜，水开了回来关火 |
-| **事件循环 (Event Loop)** | 调度所有协程的「调度器」 | 餐厅服务员，同时服务多桌客人 |
-| **可等待对象 (Awaitable)** | 用 `await` 关键字等待的对象 | 等外卖、等烧水、等电梯 |
-
-### 2. 并发 vs 并行
-
-| 模式 | 说明 | 适用场景 |
-|------|------|---------|
-| **并发 (Concurrency)** | 交替执行，看起来同时在跑 | IO 密集型任务（网络请求、文件读写） |
-| **并行 (Parallelism)** | 真的同时在跑（多CPU核） | CPU 密集型任务（计算、训练模型） |
-
-> Agent 开发 90% 是 IO 密集型（调用大模型 API、查数据库、搜网络），所以**异步并发是核心技能**！
+| 时间段 | 学习内容 | 完成情况 |
+|--------|---------|---------|
+| **09:00-10:00** | 异步编程核心概念 | ⬜️ / ✅ |
+| **10:00-11:00** | async/await 语法实战 + 常见坑 | ⬜️ / ✅ |
+| **11:00-12:00** | aiohttp 异步 HTTP 请求实战 | ⬜️ / ✅ |
+| **14:00-15:00** | 信号量 Semaphore 并发控制原理 + 实战 | ⬜️ / ✅ |
+| **15:00-16:00** | 超时机制 + 指数退避重试原理 + 实战 | ⬜️ / ✅ |
+| **16:00-17:00** | 完整异步批量请求项目实战 | ⬜️ / ✅ |
+| **19:00-20:00** | 【面试题专项】10 道异步编程面试题 | ⬜️ / ✅ |
+| **20:00-21:00** | 复盘 + 整理面试话术 + 写心得 | ⬜️ / ✅ |
 
 ---
 
-## 💻 代码实战
+## 🎯 09:00-10:00：异步编程核心概念
 
-### 🎯 第一步：最简单的异步 Demo
+### 📝 核心知识点 + 对应面试考点
+
+| 知识点 | 面试考点 | 回答要点 |
+|--------|---------|---------|
+| **什么是协程？** | 协程和线程的区别？分别适用什么场景？ | 1. 协程是用户态调度，线程是内核态调度<br>2. 协程切换开销极小（函数调用级），线程切换开销大<br>3. 协程数量可以开到 10 万+，线程一般几百个就到瓶颈<br>**场景**：协程适合 IO 密集型，线程适合 CPU 密集型 |
+| **什么是事件循环？** | 事件循环的工作原理是什么？ | 1. 单线程跑所有协程<br>2. 不断循环：检查哪些协程就绪了 → 执行就绪的协程<br>3. 遇到 IO 等待就切走，不阻塞<br>4. 本质：用单线程模拟并发，避免线程切换开销 |
+| **什么是可等待对象？** | await 到底在等什么？ | 1. 协程函数、Task、Future 都是可等待对象<br>2. 遇到 await，当前协程暂停，让事件循环去跑别的<br>3. 等 await 的东西完成了，再回来继续跑后面的代码 |
+| **并发 vs 并行** | 并发和并行的区别？ | 1. 并发：交替执行，看起来同时在跑（单线程）<br>2. 并行：真的同时在跑（多核 CPU）<br>3. Agent 开发 90% 是 IO 密集型，所以并发更重要 |
+
+### 💡 类比理解
+- **协程 = 你在家烧水 + 切菜 + 煮饭**
+  - 水烧上了不等，去切菜（遇到 await 切走）
+  - 菜切到一半饭熟了响了，去关火（IO 完成，切回来继续）
+  - 一个人同时干多件事 = 单线程并发
+
+- **线程 = 雇 3 个工人，一人干一件事**
+  - 开销大，人多了工资高（内存占用大）、调度麻烦（上下文切换）
+
+### ✅ 本小节验收
+- [ ] 能流利说出协程和线程的 3 个核心区别
+- [ ] 能解释清楚事件循环的工作原理
+- [ ] 能说出什么场景用协程，什么场景用线程
+
+---
+
+## 🎯 10:00-11:00：async/await 语法实战 + 常见坑
+
+### 📝 核心知识点 + 对应面试考点
+
+| 知识点 | 面试考点 | 回答要点 |
+|--------|---------|---------|
+| **async def 定义协程** | 调用 async def 函数得到了什么？直接调用会发生什么？ | 1. 不是直接执行，返回一个协程对象<br>2. 直接调用不 await 会报警告：`coroutine was never awaited` |
+| **await 语法** | 什么东西可以 await？不 await 会怎么样？ | 1. 只有可等待对象才能 await：协程、Task、Future<br>2. 不 await = 协程永远不执行，资源泄漏 |
+| **asyncio.create_task()** | create_task() 和直接 await 的区别？ | 1. 直接 await = 串行执行，一个完了才能下一个<br>2. create_task() = 并发执行，交给事件循环调度<br>3. 这是实现并发的核心！ |
+
+### 💻 必写代码 1：串行 vs 并发对比
 
 ```python
 # -*- coding: utf-8 -*-
 import asyncio
+import time
 
-async def hello(name: str, delay: int):
-    """一个简单的异步函数"""
-    print(f"开始: {name}, 等待 {delay} 秒")
-    await asyncio.sleep(delay)  # 暂停执行，让给其他协程
-    print(f"完成: {name}")
+async def hello(name, delay):
+    print(f"开始: {name}, 时间: {time.time() - start:.2f}s")
+    await asyncio.sleep(delay)
+    print(f"完成: {name}, 时间: {time.time() - start:.2f}s")
 
-async def main():
-    print("=== 串行执行（慢）===")
+async def main_serial():
+    """串行执行：总耗时 2+1 = 3秒"""
+    print("\n=== 串行执行 ===")
     await hello("A", 2)
     await hello("B", 1)
-    
-    print("\n=== 并发执行（快）===")
+
+async def main_concurrent():
+    """并发执行：总耗时 max(2,1) = 2秒"""
+    print("\n=== 并发执行 ===")
     task1 = asyncio.create_task(hello("A", 2))
     task2 = asyncio.create_task(hello("B", 1))
     await task1
     await task2
 
-# 运行
 if __name__ == "__main__":
-    asyncio.run(main())
+    start = time.time()
+    
+    # Windows 平台加这行，避免 Event Loop is closed 错误
+    import sys
+    if sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+    asyncio.run(main_serial())
+    asyncio.run(main_concurrent())
+    
+    print(f"\n✅ 结论：并发比串行快 {round((3/2 - 1)*100)}%！")
 ```
 
-✅ **运行观察**：并发执行总耗时 2 秒，不是 3 秒！
+### ⚠️ 常见坑 1：忘了 await
+```python
+# ❌ 错误：协程创建了但永远不执行
+async def bad():
+    hello("A", 2)  # 没 await！RuntimeWarning
+
+# ✅ 正确
+async def good():
+    await hello("A", 2)
+```
+
+### ⚠️ 常见坑 2：不要用 time.sleep()
+```python
+# ❌ 错误：time.sleep() 是同步的，会阻塞整个事件循环
+async def bad():
+    time.sleep(2)  # 所有协程都卡住了！
+
+# ✅ 正确：用 asyncio.sleep()
+async def good():
+    await asyncio.sleep(2)
+```
+
+### ✅ 本小节验收
+- [ ] 能写出上面的代码，理解串行 vs 并发的区别
+- [ ] 能说出 create_task() 的作用
+- [ ] 知道 2 个最常见的异步坑
 
 ---
 
-### 🎯 第二步：aiohttp 基础使用
+## 🎯 11:00-12:00：aiohttp 异步 HTTP 请求实战
 
-#### 安装
-```bash
-pip install aiohttp
-```
+### 📝 核心知识点 + 对应面试考点
 
-#### 最简单的异步请求
+| 知识点 | 面试考点 | 回答要点 |
+|--------|---------|---------|
+| **aiohttp vs requests** | 为什么要用 aiohttp 不用 requests？ | 1. requests 是同步的，发请求的时候整个线程卡住<br>2. aiohttp 是异步的，等响应的时候可以跑别的协程<br>3. 并发 100 个请求的时候，aiohttp 快 100 倍 |
+| **ClientSession 复用** | ClientSession 为什么要复用？每个请求新建一个会怎么样？ | 1. TCP 连接复用，减少三次握手开销<br>2. 每个请求新建 = 每次都握手，慢 2-3 倍<br>3. 连接太多会耗尽本地端口 |
+| **async with 上下文管理器** | async with 和 with 的区别？ | 1. with 是同步的上下文管理器<br>2. async with 是异步的，`__aenter__` 和 `__aexit__` 是协程<br>3. 保证异常时资源也能正确释放 |
+
+### 💻 必写代码 2：aiohttp 基础
 
 ```python
 # -*- coding: utf-8 -*-
 import asyncio
 import aiohttp
 
-async def fetch_url(url: str):
-    # ClientSession 要复用，不要每个请求新建！
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            print(f"URL: {url}, 状态码: {response.status}")
-            return await response.text()
+async def fetch_url(session, url):
+    async with session.get(url) as response:
+        print(f"URL: {url}, 状态码: {response.status}")
+        return await response.text()
 
 async def main():
-    html = await fetch_url("https://httpbin.org/get")
-    print(f"响应长度: {len(html)}")
+    # ✅ 正确：整个应用共用一个 ClientSession，复用 TCP 连接
+    async with aiohttp.ClientSession() as session:
+        html1 = await fetch_url(session, "https://httpbin.org/get")
+        html2 = await fetch_url(session, "https://httpbin.org/delay/1")
+        print(f"响应1长度: {len(html1)}, 响应2长度: {len(html2)}")
 
 if __name__ == "__main__":
+    import sys
+    if sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
     asyncio.run(main())
 ```
 
----
-
-### 🎯 第三步：并发控制 + 超时 + 重试（完整版本）
-
-这是 **Agent 开发天天要用的代码**，一定要写熟！
-
-完整代码：`code/day01_async_complete.py`
-
-核心逻辑预览：
+### ❌ 错误写法示范（千万不要这么写）
 ```python
-# 1. 信号量控制并发
-semaphore = asyncio.Semaphore(3)
-
-# 2. 超时控制
-timeout = ClientTimeout(total=10)
-
-# 3. 指数退避重试
-delay = 1 * (2 ** retry_count)  # 1s -> 2s -> 4s
+# ❌ 错误：每个请求新建一个 ClientSession，每次都三次握手
+async def bad():
+    urls = ["https://httpbin.org/get" for _ in range(10)]
+    for url in urls:
+        async with aiohttp.ClientSession() as session:  # 每次新建 = 慢 2-3 倍！
+            await session.get(url)
 ```
 
----
-
-## 🔍 三个 Demo 的原理深度理解
-
----
-
-### 📋 三个 Demo 的层级关系
-
-| Demo | 定位 | 核心知识点 | 难度 |
-|------|------|-----------|------|
-| **Demo 1** | 异步基础 | async/await、协程、事件循环 | ⭐ |
-| **Demo 2** | HTTP 基础 | ClientSession、异步请求上下文 | ⭐⭐ |
-| **Demo 3** | 工程化完整实现 | 信号量、超时、指数退避重试、错误处理 | ⭐⭐⭐ |
-
-```
-Demo 1: 理解异步是什么
-    ↓
-Demo 2: 理解异步 HTTP 怎么用
-    ↓
-Demo 3: 理解工程化的异步代码应该怎么写
-```
-
----
-
-### 🔍 Demo 1：简单异步函数 - 原理理解
-
-#### 原理图解
-
-```
-时间轴:  0s ──────── 1s ──────── 2s ──────>
-
-串行执行:
-    ┌───────── A(2s) ─────────┐
-                              ┌── B(1s) ──┘
-    总耗时 = 2 + 1 = 3 秒
-
-并发执行:
-    ┌───────── A(2s) ─────────┐
-    ┌── B(1s) ──┘             
-    总耗时 = max(2, 1) = 2 秒 ✅
-```
-
-#### 关键理解点
-
-1. **`async def` 不是魔法**
-   - 只是把普通函数变成「协程函数」
-   - 调用它不会立即执行，只会返回一个协程对象
-
-2. **`await` 是「让出 CPU」的信号**
-   - 遇到 `await`，当前协程暂停，让事件循环去跑其他协程
-   - 等 `await` 的东西完成了，再回来继续跑后面的代码
-
-3. **`create_task` 才是真正并发的开始**
-   - 把协程包装成 Task，交给事件循环调度
-   - 如果不 create_task，直接 await 就是串行
-
-4. **事件循环是调度器**
-   - 单线程跑所有协程
-   - 靠 IO 等待的空隙来回切换，实现并发
-   - 不是多线程，没有 GIL 问题
-
----
-
-### 🔍 Demo 2：aiohttp 基础使用 - 原理理解
-
-#### 原理图解
-
-```
-ClientSession 是什么？
-┌─────────────────────────────────────────┐
-│  一个 ClientSession = 一个连接池         │
-│  内部管理了多个 TCP 连接                 │
-│  复用连接，减少握手开销                  │
-│  自动处理 keep-alive                     │
-└─────────────────────────────────────────┘
-
-请求流程:
-    1. 创建/复用 TCP 连接
-    2. 发送 HTTP 请求
-    3. ──────────────────────> 网络 IO 等待（这里可以切换到其他协程）
-    4. <────────────────────── 收到响应
-    5. 解析响应返回
-```
-
-#### 关键理解点
-
-1. **`ClientSession` 一定要复用**
-   - ❌ 错误：每个请求都新建一个 Session
-   - ✅ 正确：整个应用共用一个 Session
-   - 为什么？TCP 三次握手开销很大，复用连接性能提升 10 倍以上
-
-2. **`async with` 是异步上下文管理器**
-   - 进入时自动 `__aenter__`
-   - 退出时自动 `__aexit__` 清理资源
-   - 保证连接正确释放，不会泄漏
-
-3. **为什么 response.text() 也要 await？**
-   - 收到响应头就返回 response 对象了
-   - 响应体还在网络上慢慢传
-   - `await response.text()` 等 body 全部收完
-
----
-
-### 🔍 Demo 3：并发控制完整版 - 原理理解
-
-#### 信号量 Semaphore 工作机制
-
-```
-信号量 = 3 个许可证
-
-协程1 ── 获取 ──> 许可证剩 2 ──> 执行请求
-协程2 ── 获取 ──> 许可证剩 1 ──> 执行请求
-协程3 ── 获取 ──> 许可证剩 0 ──> 执行请求
-
-协程4 ── 获取失败，排队等待 ─────┐
-协程5 ── 获取失败，排队等待 ─────┤
-协程6 ── 获取失败，排队等待 ─────┤
-
-协程1 完成 ── 归还许可证 ──> 许可证剩 1 ──> 协程4 开始执行
-协程2 完成 ── 归还许可证 ──> 许可证剩 2 ──> 协程5 开始执行
-协程3 完成 ── 归还许可证 ──> 许可证剩 3 ──> 协程6 开始执行
-```
-
-#### 指数退避重试工作机制
-
-```
-第1次失败：等 1s 重试
-  ↓
-第2次失败：等 2s 重试（*2）
-  ↓
-第3次失败：等 4s 重试（*2）
-  ↓
-放弃
-
-为什么指数增长？
-- 保护服务器，避免重试风暴
-- 服务器越忙，重试间隔应该越长
-- 线性退避太激进，指数退避更温和
-```
-
-#### 关键理解点
-
-1. **为什么需要控制并发？**
-   - 服务器有 QPS 限制，并发太高会被封
-   - 本地端口有限，TCP 连接数有限
-   - 太多并发会导致超时反而更多
-
-2. **为什么超时很重要？**
-   - 网络是不可靠的，请求可能永远回不来
-   - 不加超时，协程会永远挂住，整个系统卡住
-   - Agent 开发中，所有外部 IO 必须加超时
-
-3. **4xx vs 5xx 重试策略不同**
-   - 4xx（客户端错误）：不要重试！改了也没用
-   - 5xx（服务器错误）：可以重试，服务器可能临时故障
-   - 超时/网络错误：可以重试
-
-4. **错误处理的哲学**
-   - 「快速失败，优雅降级」
-   - 一个请求失败不要影响其他请求
-   - 失败了要记录原因，方便排查
-
----
-
-## 📊 从「能跑」到「能用」的区别
-
-| 维度 | Demo 1/2（玩具级） | Demo 3（工程级） |
-|------|---------|----------------|
-| 并发控制 | ❌ 无 | ✅ 信号量 |
-| 超时控制 | ❌ 无 | ✅ 总超时 |
-| 错误处理 | ❌ 抛异常就崩 | ✅ 分类处理 |
-| 重试机制 | ❌ 失败就死 | ✅ 指数退避 |
-| 可观测性 | ❌ 无 | ✅ 进度打印 |
-| 结果统计 | ❌ 无 | ✅ 成功/失败统计 |
-
----
-
-## 💡 常见问题排错
-
-| 问题 | 原因 | 解决方法 |
-|------|------|---------|
-| `RuntimeError: Event loop is closed` | Windows 平台特殊问题 | 加上：`asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())` |
-| 类型导入警告 | Python 3.9+ 已支持内置泛型 | 不再需要 `from typing import Dict, List`，直接用 `dict, list` |
-| 连接太多报错 | 并发太高被限流 | 调小 `MAX_CONCURRENT`（比如改成 2） |
-| 超时时间到了还在等 | 超时配置没生效 | 确认 `timeout` 传给了 `ClientSession` |
-| 中文输出乱码 | 编码问题 | 文件开头加 `# -*- coding: utf-8 -*-`，终端用 UTF-8 |
-
----
-
-## 🚀 Agent 开发中的实际应用
-
-你今天写的 `fetch_with_retry` 函数，在 Agent 开发中每天都会用到：
-
-| 场景 | 用到的技术 |
-|------|-----------|
-| 并行调用多个大模型 API | 信号量 + 超时 + 重试 |
-| 同时搜索 10 个网页 | 并发控制 |
-| 批量向量化 100 篇文档 | 异步并发 |
-| 多 Agent 并行对话 | 任务调度 |
-
-> **Day01 是整个 Agent 开发的基石，把异步并发搞懂了，后面的东西都是在这个基础上堆逻辑。**
-
----
-
-## ✅ 今日验收标准
-
-### 1. 代码跑通
-- [x] 完整代码（`code/day01_async_complete.py`）能正常运行
-- [x] 没有报错，输出正常
-
-### 2. 观察到的现象
-- [x] 同时最多只有 **3 个**请求在执行（Semaphore 生效）
-- [ ] 超时/失败的请求会自动重试（1s → 2s → 4s 间隔）
-- [ ] 总耗时应该在 **4-5 秒**左右，而不是串行的 7+ 秒
-
-### 3. 理解原理（能回答这三个问题）
-- [ ] **为什么需要 Semaphore？** 不控制并发会怎么样？
-- [ ] **指数退避重试的好处是什么？** 为什么不是固定 1 秒重试？
-- [ ] **ClientSession 为什么要复用？** 每个请求新建一个会怎么样？
-
----
-
-## 📝 自我检查清单
-
-- [ ] 能说出 async/await 到底在干嘛
-- [ ] 能解释为什么并发 10 个请求只花了 2 秒，不是 20 秒
-- [ ] 能说出 Semaphore 的工作原理
-- [ ] 能解释为什么指数退避是 1-2-4，不是 1-1-1
+### ✅ 本小节验收
+- [ ] 能写出上面的 aiohttp 基础代码
 - [ ] 能说出 ClientSession 为什么要复用
-- [ ] 能写出带超时带重试的异步请求
+- [ ] 能说出 aiohttp 相比 requests 的优势
 
 ---
 
-## 📝 今日反思
+## 🎯 14:00-15:00：信号量 Semaphore 并发控制原理 + 实战
 
-> 💡 **提示**：以下问题没有标准答案，自言自语即可。写下来就是胜利。
+### 📝 核心知识点 + 对应面试考点
 
----
+| 知识点 | 面试考点 | 回答要点 |
+|--------|---------|---------|
+| **为什么需要控制并发？** | 不控制并发会怎么样？ | 1. 服务器有 QPS 限制，并发太高会被封 IP<br>2. 本地端口有限，TCP 连接数有限<br>3. 太多并发会导致超时反而更多 |
+| **信号量工作原理** | 信号量的工作原理是什么？ | 1. 类似许可证，比如 3 个许可证<br>2. 每个协程进来先拿许可证，拿到了才能执行<br>3. 执行完归还许可证，下一个协程才能拿<br>4. 许可证没了就排队等 |
+| **Semaphore vs BoundedSemaphore** | 两者的区别？推荐用哪个？ | 1. Semaphore 可以 release() 多次，许可证数会超过初始值<br>2. BoundedSemaphore 不允许超过初始值，更安全<br>3. 推荐用 BoundedSemaphore |
 
-### Q1：类比理解
-如果让我向一个完全不懂编程的人解释「异步」，我会怎么打比方？
-
-```
-我的比方：
-
-
-```
-
----
-
-### Q2：代码观察
-如果我把 Demo1 中的 `await asyncio.sleep(2)` 换成 `time.sleep(2)`，会发生什么？为什么？
-
-```
-我的观察：
-
-
-```
-
----
-
-### Q3：信号量机制
-Semaphore 设为 3，但我创建了 10 个任务，实际同时运行的有几个？另外 7 个在哪？
-
-```
-我的理解：
-
-
-```
-
----
-
-### Q4：实战复盘
-我今天遇到的第一个报错是什么？怎么解决的？
-
-```
-报错信息：
-
-
-解决方法：
-
-
-```
-
----
-
-### Q5：延伸思考
-如果我要并发请求 100 个 URL，但目标网站限制每秒最多 10 个请求，我应该怎么调整代码？
-
-```
-我的思路：
-
-
-```
-
----
-
-### 📌 今日一句话总结
-
-```
-
-
-```
-
----
-
-## ✅ 完成标记
-
-| 任务　　　　　　　　　　| 完成情况 |
-| -------------------------| ----------|
-| 运行第一个异步 Demo　　 | ⬜️ / ✅　　|
-| 运行 aiohttp 基础 Demo　| ⬜️ / ✅　　|
-| 运行完整的并发控制 Demo | ⬜️ / ✅　　|
-| 能回答 3 个原理问题　　 | ⬜️ / ✅　　|
-| 写完学习笔记　　　　　　| ⬜️ / ✅　　|
-
----
-
-## ❓ 常见问题 FAQ
-
-### 1. Optional 是什么意思？
-Optional 类型表示一个值可以是 `None` 或任意类型的值。
-例如，`Optional[int]` 表示一个值可以是 `None` 或 `int` 类型。
-
-### 2. 协程和线程有什么区别？
-
-| 特性 | 协程 | 线程 |
-|------|------|------| 
-| **调度方式** | 用户态调度，由程序自己控制 | 内核态调度，操作系统控制 |
-| **切换开销** | 极小，相当于函数调用 | 较大，需要上下文切换 |
-| **并发数量** | 可以轻松开 10000+ 个 | 一般几百个就到瓶颈 |
-| **共享数据** | 单线程内，不需要锁 | 多线程竞争，需要锁 |
-| **适用场景** | IO 密集型 | CPU 密集型 |
-
-### 3. aiohttp 是什么？
-aiohttp 是 Python 生态最流行的异步 HTTP 客户端/服务器框架，基于 asyncio 实现，专门用于高性能异步 HTTP 请求。
-
-### 4. BIO / NIO / AIO 是什么？
-
-这是三种 IO 模型，理解它们有助于搞懂异步编程的本质：
-
-| 模型 | 全称 | 特点 | 类比 |
-|------|------|------|------|
-| **BIO** | Blocking IO | 一个连接一个线程，阻塞等待 | 排队打饭，轮到你之前啥也干不了 |
-| **NIO** | Non-blocking IO | 一个线程处理多个连接，轮询检查 | 频繁去窗口问"好了没" |
-| **AIO** | Asynchronous IO | 发起请求后直接干别的，好了通知你 | 点外卖，外卖到了电话通知你 |
-
-**Python 的 asyncio 属于 AIO 模型**。`await` 就是"等外卖到了再继续"，等待期间你可以去切菜（执行其他协程）。
-
-> 💡 **Agent 开发视角**：调用大模型 API 就是典型的 AIO 场景——发请求后等几秒，期间可以处理其他用户请求。
-
----
-
-### 5. 什么是 GIL？它对异步编程有影响吗？
-
-**GIL（Global Interpreter Lock，全局解释器锁）** 是 CPython 的一个机制，同一时刻只允许一个线程执行 Python 字节码。
-
-```
-┌──────────────────────────────────┐
-│  CPython 进程                    │
-│  ┌──────────────────────────┐    │
-│  │  GIL（全局锁）            │    │
-│  │  同一时刻只有1个线程能拿到 │    │
-│  └──────────────────────────┘    │
-│  线程1  线程2  线程3              │
-│   🔄     ⏳     ⏳               │
-│  （只有拿到GIL的才能执行）         │
-└──────────────────────────────────┘
-```
-
-**GIL 对异步编程的影响**：
-
-| 场景 | GIL 影响 | 说明 |
-|------|---------|------|
-| IO 密集型（网络请求） | ❌ 无影响 | `await` 时主动释放 GIL，其他协程照常跑 |
-| CPU 密集型（计算） | ✅ 有影响 | 计算时会霸占 GIL，其他协程卡住 |
-
-> 💡 **Agent 开发视角**：Agent 90% 是 IO 密集型（调 API、查库），所以 GIL 几乎不影响。但如果要做本地模型推理（CPU 计算），就要注意了——可以用 `asyncio.to_thread()` 把计算扔到线程池，或者用多进程。
-
----
-
-### 6. TCP 三次握手与四次挥手
-
-理解 TCP 连接过程，就能理解为什么 ClientSession 复用连接能提升性能。
-
-#### 三次握手（建立连接）
-
-```
-客户端                          服务器
-  │                               │
-  │──── SYN（我想建立连接）──────→│  第1次：客户端发起
-  │                               │
-  │←─── SYN+ACK（好的，我也准备好了）──│  第2次：服务器确认
-  │                               │
-  │──── ACK（收到，开始通信）─────→│  第3次：客户端确认
-  │                               │
-  │    ✅ 连接建立，开始传输数据     │
-```
-
-#### 四次挥手（断开连接）
-
-```
-客户端                          服务器
-  │                               │
-  │──── FIN（我要关闭了）────────→│  第1次：客户端发起关闭
-  │                               │
-  │←─── ACK（知道了）────────────│  第2次：服务器确认
-  │                               │  （服务器可能还有数据没发完）
-  │                               │
-  │←─── FIN（我也关闭了）────────│  第3次：服务器也发完了
-  │                               │
-  │──── ACK（收到，再见）────────→│  第4次：客户端确认
-  │                               │
-  │    ✅ 连接关闭                 │
-```
-
-> 💡 **Agent 开发视角**：每次新建连接都要 3 次握手（约 1-3ms），如果调用 1000 次 API 就浪费 1-3 秒在握手 alone。**复用 ClientSession = 复用 TCP 连接 = 省掉所有握手开销**。这就是为什么 Day01 反复强调 Session 复用！
-
----
-
-### 7. UDP 协议是什么？和 TCP 有什么区别？
-
-| 特性 | TCP | UDP |
-|------|-----|-----|
-| **连接** | 面向连接（三次握手） | 无连接，直接发 |
-| **可靠性** | 可靠，保证数据到达 | 不可靠，可能丢包 |
-| **顺序** | 保证顺序 | 不保证顺序 |
-| **速度** | 较慢（有确认机制） | 很快（发完就不管了） |
-| **开销** | 大（头部 20 字节） | 小（头部 8 字节） |
-| **应用** | HTTP、API调用、文件传输 | 视频通话、游戏、DNS |
-
-```
-TCP = 打电话（先拨号建立连接，确认对方听到，再说内容）
-UDP = 发短信（发完就不管了，对方收不收到不一定）
-```
-
-> 💡 **Agent 开发视角**：Agent 开发中几乎只用 TCP（HTTP/WebSocket 都基于 TCP）。但如果你要做实时语音对话 Agent，可能会用到 UDP（WebRTC 底层就是 UDP）。
-
----
-
-### 8. 异步编程中有哪些常见的内存泄露陷阱？
-
-异步编程的内存泄露比同步编程更隐蔽，以下是 3 个最常见的坑：
-
-#### 坑 1：忘记 await（最常见！）
+### 💻 必写代码 3：信号量控制并发
 
 ```python
-# ❌ 错误：协程创建了但从未 await，也不会报错
-async def fetch_data():
-    ...
-
-# 调用了但没 await —— 协程对象被创建后立即被垃圾回收
-fetch_data()  # RuntimeWarning: coroutine was never awaited
-
-# ✅ 正确
-await fetch_data()
-```
-
-**后果**：协程创建但没执行，资源（连接、文件句柄）可能没释放。
-
-#### 坑 2：Session 没有正确关闭
-
-```python
-# ❌ 错误：异常时 Session 不会关闭，连接泄漏
-session = aiohttp.ClientSession()
-data = await session.get(url)  # 如果这里抛异常...
-
-# ✅ 正确：async with 保证异常时也会关闭
-async with aiohttp.ClientSession() as session:
-    data = await session.get(url)
-```
-
-**后果**：TCP 连接永远不会释放，最终耗尽端口。
-
-#### 坑 3：任务取消后资源未清理
-
-```python
-# ❌ 错误：任务被取消时，文件可能没关闭
-async def process():
-    f = open('data.txt', 'w')
-    await slow_operation()  # 如果这里被取消...
-    f.close()  # 这行不会执行！
-
-# ✅ 正确：用 try/finally 确保资源释放
-async def process():
-    f = open('data.txt', 'w')
-    try:
-        await slow_operation()
-    finally:
-        f.close()  # 无论是否被取消都会执行
-```
-
-**后果**：文件句柄泄漏，长时间运行后 `Too many open files`。
-
-#### 排查工具
-
-```python
-# 检查当前有多少个协程在运行
+# -*- coding: utf-8 -*-
 import asyncio
-print(len(asyncio.all_tasks()))  # 正常应该是个位数
+import aiohttp
+import time
 
-# 检查 TCP 连接数（Windows）
-# netstat -an | find "ESTABLISHED" | find /c /v ""
+MAX_CONCURRENT = 3  # 最多同时 3 个请求
+
+async def fetch_with_semaphore(semaphore, session, url):
+    async with semaphore:  # 先拿许可证，没拿到就在这等
+        print(f"开始请求: {url}")
+        async with session.get(url) as response:
+            await asyncio.sleep(1)  # 模拟耗时
+            print(f"完成请求: {url}, 状态码: {response.status}")
+            return response.status
+
+async def main():
+    semaphore = asyncio.BoundedSemaphore(MAX_CONCURRENT)
+    timeout = aiohttp.ClientTimeout(total=10)
+    
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        urls = [f"https://httpbin.org/delay/1?i={i}" for i in range(10)]
+        tasks = [fetch_with_semaphore(semaphore, session, url) for url in urls]
+        await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    import sys
+    if sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+    start = time.time()
+    asyncio.run(main())
+    print(f"\n✅ 总耗时: {time.time() - start:.2f} 秒")
+    print(f"✅ 观察：同时最多只有 {MAX_CONCURRENT} 个请求在执行！")
 ```
 
-> 💡 **Agent 开发视角**：Agent 是长时间运行的服务，一个小泄露积累几天就可能崩溃。**记住两条铁律：① 永远 await 你的协程；② 永远用 async with 管理资源。**
+### ✅ 运行后你会看到
+- 同时只有 3 个请求在跑
+- 3 个完成了，接下来 3 个才开始
+- 总耗时约 4 秒（10 个请求 / 3 并发 = 3.33 轮）
+
+### ✅ 本小节验收
+- [ ] 能写出上面的信号量控制代码
+- [ ] 能解释清楚信号量的工作原理
+- [ ] 知道为什么需要控制并发
 
 ---
 
-**🎉 恭喜完成 Day01！明天继续：Day 02 - Prompt 工程精通 + 注意力机制入门** 🚀
+## 🎯 15:00-16:00：超时机制 + 指数退避重试原理 + 实战
+
+### 📝 核心知识点 + 对应面试考点
+
+| 知识点 | 面试考点 | 回答要点 |
+|--------|---------|---------|
+| **为什么需要超时？** | 不加超时会怎么样？所有外部 IO 都要加超时吗？ | 1. 网络是不可靠的，请求可能永远回不来<br>2. 协程永远挂住，整个系统卡住<br>3. 是的！所有外部 IO 必须加超时 |
+| **为什么需要重试？** | 重试策略有哪些？ | 1. 网络抖动、服务器临时故障都可能失败<br>2. 重试策略：立即重试、固定间隔、指数退避<br>3. 不是所有错误都要重试（4xx 不要重试，5xx 可以重试） |
+| **指数退避原理** | 指数退避为什么是 2 的幂次？固定间隔重试的问题？ | 1. 重试间隔越来越长，给服务器恢复的时间<br>2. 固定间隔 = 大家同时重试，服务器雪崩<br>3. 指数退避 = 重试越来越稀疏，避免风暴 |
+
+### 💻 必写代码 4：指数退避重试完整实现
+
+```python
+# -*- coding: utf-8 -*-
+import asyncio
+import aiohttp
+import logging
+from aiohttp import ClientTimeout
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+INITIAL_DELAY = 1  # 初始 1 秒
+MAX_CONCURRENT = 3
+
+async def fetch_with_retry(session, url, max_retries=MAX_RETRIES):
+    """带指数退避重试的异步请求"""
+    for attempt in range(max_retries):
+        try:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    logger.info(f"✅ 成功: {url}, 第 {attempt+1} 次尝试")
+                    return await response.json()
+                else:
+                    logger.warning(f"⚠️ 状态码 {response.status}: {url}")
+                    if 400 <= response.status < 500:
+                        return None  # 4xx 客户端错误，不重试
+                    
+        except Exception as e:
+            logger.warning(f"❌ 失败: {url}, 第 {attempt+1} 次尝试, 错误: {str(e)}")
+        
+        # 指数退避等待
+        if attempt < max_retries - 1:
+            delay = INITIAL_DELAY * (2 ** attempt)  # 1s → 2s → 4s
+            logger.info(f"⏳ {delay} 秒后重试...")
+            await asyncio.sleep(delay)
+    
+    logger.error(f"❌ 最终失败: {url}, 重试了 {max_retries} 次")
+    return None
+
+async def main():
+    semaphore = asyncio.BoundedSemaphore(MAX_CONCURRENT)
+    timeout = ClientTimeout(total=10)
+    
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        urls = [
+            "https://httpbin.org/status/500",  # 会失败重试
+            "https://httpbin.org/status/404",  # 4xx，不重试
+            "https://httpbin.org/delay/2",     # 正常
+        ]
+        tasks = [fetch_with_retry(session, url) for url in urls]
+        await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    import sys
+    if sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+    asyncio.run(main())
+```
+
+### ✅ 运行后你会看到
+- 500 错误会重试 3 次，间隔 1s → 2s → 4s
+- 404 错误直接放弃，不重试
+- 正常请求一次成功
+
+### ✅ 本小节验收
+- [ ] 能写出上面的指数退避重试代码
+- [ ] 能说出为什么 4xx 不重试，5xx 可以重试
+- [ ] 能解释清楚指数退避为什么是 2 的幂次
+
+---
+
+## 🎯 16:00-17:00：完整异步批量请求项目实战
+
+### 💻 终极代码：Day01 完整版（面试必背！）
+
+完整代码见：`code/async_complete.py`
+
+**包含功能（面试写出来直接加分！）**：
+1. ✅ 信号量并发控制
+2. ✅ 超时控制
+3. ✅ 指数退避重试
+4. ✅ 4xx/5xx 错误分类处理
+5. ✅ 进度打印和日志
+6. ✅ 成功/失败统计
+
+### ✅ 本小节验收
+- [ ] 完整代码能跑通，没有报错
+- [ ] 能解释清楚代码里每一行的作用
+- [ ] 能在 10 分钟内默写出核心逻辑
+
+---
+
+## 🎯 19:00-20:00：【面试题专项】10 道异步编程面试题
+
+### 🔥 高频面试题（必须全部能答出来！）
+
+| # | 面试题 | 难度 | 答案位置 |
+|---|--------|------|---------|
+| 1 | 协程和线程的区别？分别适用什么场景？ | ⭐⭐ | `面试题_标准答案.md` |
+| 2 | async/await 到底在做什么？await 到底在等什么？ | ⭐⭐ | `面试题_标准答案.md` |
+| 3 | 为什么要用 aiohttp 不用 requests？aiohttp 快在哪里？ | ⭐⭐ | `面试题_标准答案.md` |
+| 4 | ClientSession 为什么要复用？每个请求新建一个会怎么样？ | ⭐⭐⭐ | `面试题_标准答案.md` |
+| 5 | 信号量的工作原理？为什么需要控制并发？ | ⭐⭐⭐ | `面试题_标准答案.md` |
+| 6 | 指数退避重试为什么是 2 的幂次？固定间隔重试的问题？ | ⭐⭐⭐ | `面试题_标准答案.md` |
+| 7 | 不加超时会怎么样？所有外部 IO 都要加超时吗？ | ⭐⭐ | `面试题_标准答案.md` |
+| 8 | asyncio.create_task() 和直接 await 的区别？ | ⭐⭐ | `面试题_标准答案.md` |
+| 9 | 什么是事件循环？它的工作原理是什么？ | ⭐⭐⭐ | `面试题_标准答案.md` |
+| 10 | 手写：带并发控制、超时、重试的异步请求函数 | ⭐⭐⭐⭐ | `面试题_标准答案.md` |
+
+### ✅ 本小节验收
+- [ ] 全部 10 道题都能流利回答
+- [ ] 第 10 道代码题能在 10 分钟内写对
+
+---
+
+## 🎯 20:00-21:00：复盘 + 整理面试话术
+
+### 📝 3 分钟面试回答模板（背下来！）
+
+> **面试官问**：你做过异步编程吗？说说你对 Python 异步的理解？
+
+**你的回答（3 分钟版本，一字不差背下来！）**：
+
+> "我对 Python 异步编程有比较深入的理解和实战经验。简单说，异步编程就是在单线程里利用 IO 等待的时间来同时处理多个任务，特别适合 IO 密集型场景，比如调用大模型 API、批量 HTTP 请求这种场景。
+> 
+> 核心概念有三个：协程、事件循环、可等待对象。协程可以暂停和恢复，开销很小；事件循环是调度器，单线程跑所有协程；遇到 await 的时候当前协程暂停，让事件循环去跑别的就绪的协程，等 IO 完成了再切回来。
+> 
+> 我实战中用 aiohttp 写过异步批量请求，做了三层优化：第一是 ClientSession 复用，避免每次新建 TCP 连接的三次握手开销；第二是用 BoundedSemaphore 信号量控制并发数，避免并发太高被服务器封或者本地端口耗尽；第三是加了超时控制和指数退避重试，1 秒、2 秒、4 秒间隔重试，4xx 客户端错误不重试，5xx 和网络错误才重试。
+> 
+> 最后效果是原来同步请求 100 次要 100 秒，用异步优化后只需要 5-10 秒，性能提升了 10-20 倍。"
+
+### ✅ Day01 最终验收标准（全部做到才能进入 Day02！）
+
+#### 代码能力
+- [ ] 能闭着眼写出带并发控制、超时、重试的异步请求函数（10 分钟内写完）
+- [ ] 完整代码能跑通，没有报错
+- [ ] 能解释清楚代码里每一行的作用
+
+#### 理论理解
+- [ ] 能说出协程和线程的 3 个核心区别
+- [ ] 能解释清楚信号量的工作原理
+- [ ] 能说出指数退避重试为什么是 2 的幂次
+- [ ] 能说出为什么 ClientSession 要复用
+
+#### 面试话术
+- [ ] 能流利地用 3 分钟说完上面的面试回答模板
+- [ ] 上面 10 道面试题全部能答对
+
+### 📝 写今日心得（写到 `今日心得.md`）
+
+1. 今天学到了什么？
+2. 遇到了什么坑？怎么解决的？
+3. 还有什么不懂的地方？
+
+---
+
+## 📎 相关文件
+
+- 📖 完整代码：`code/async_complete.py`
+- 📖 面试题：`面试题.md`
+- 📖 面试题标准答案：`面试题_标准答案.md`
+- 📖 今日心得：`今日心得.md`
+
+---
+
+**🎉 恭喜完成 Day01！你已经搞定了 Agent 开发最核心的基础能力，明天继续 Day02：Prompt 工程精通 + 过拟合与正则化！ 🚀**
