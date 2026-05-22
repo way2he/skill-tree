@@ -35,11 +35,28 @@ version: interview
 
 ### 📝 核心知识点 + 对应面试考点
 
-| 知识点 | 面试考点 | 回答要点 |
-|--------|---------|---------|
-| **流式输出原理** | 流式输出的原理是什么？有什么好处？ | 1. SSE（Server-Sent Events）技术<br> 2. 分块生成，逐字返回，用户体验好<br> 3. 降低首字延迟（TTFT），不需要等完整生成<br> 4. 内存占用小，适合长文本生成 |
-| **非流式 vs 流式** | 什么时候用流式，什么时候用非流式？ | 1. 流式：聊天、写作、实时交互场景<br> 2. 非流式：API调用、批量处理、需要完整结果才继续<br> 3. Agent内部思考：一般用非流式，用户界面：用流式 |
-| **错误类型** | 大模型 API 常见错误有哪些？怎么处理？ | 1. 429：限流 → 指数退避重试<br> 2. 401：认证失败 → 检查 API Key<br>3. 400：参数错误 → 检查输入格式<br>4. 5xx：服务端错误 → 重试或降级 |
+#### 知识点 1：流式输出原理
+- **面试考点**：流式输出的原理是什么？有什么好处？
+- **回答要点**：
+  1. SSE（Server-Sent Events）技术
+  2. 分块生成，逐字返回，用户体验好
+  3. 降低首字延迟（TTFT），不需要等完整生成
+  4. 内存占用小，适合长文本生成
+
+#### 知识点 2：非流式 vs 流式
+- **面试考点**：什么时候用流式，什么时候用非流式？
+- **回答要点**：
+  1. 流式：聊天、写作、实时交互场景
+  2. 非流式：API调用、批量处理、需要完整结果才继续
+  3. Agent内部思考：一般用非流式，用户界面：用流式
+
+#### 知识点 3：错误类型
+- **面试考点**：大模型 API 常见错误有哪些？怎么处理？
+- **回答要点**：
+  1. 429：限流 → 指数退避重试
+  2. 401：认证失败 → 检查 API Key
+  3. 400：参数错误 → 检查输入格式
+  4. 5xx：服务端错误 → 重试或降级
 
 ### 💻 必写代码 1：流式输出完整实现
 
@@ -51,7 +68,7 @@ client = OpenAI(api_key="your-api-key")
 # 流式输出
 def stream_chat(messages):
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-5.4",
         messages=messages,
         stream=True  # 关键参数
     )
@@ -68,7 +85,7 @@ def stream_chat(messages):
 # 非流式输出
 def normal_chat(messages):
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-5.4",
         messages=messages,
         stream=False
     )
@@ -124,7 +141,7 @@ def retry_with_exponential_backoff(
 @retry_with_exponential_backoff(max_retries=5)
 def chat_with_retry(messages):
     return client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-5.4",
         messages=messages
     )
 ```
@@ -139,40 +156,82 @@ def chat_with_retry(messages):
 
 ---
 
-## 🎯 10:00-11:00：国产模型对比与选型
+## 🎯 10:00-11:00：主流模型对比与选型（2026-05 最新格局）
+
+> 📆 **时效快照**：本节针对 2026-05-22 产客能拿到的主流模型状态。大模型迭代速度 ~2.8 天/款，每 2-3 个月建议重刷一次对比表。
 
 ### 📝 核心知识点 + 对应面试考点
 
-| 知识点 | 面试考点 | 回答要点 |
-|--------|---------|---------|
-| **模型选型** | 各个模型的优缺点是什么？怎么选型？ | 1. GPT-4：质量最高，但贵，速度慢<br>2. DeepSeek：性价比高，代码能力强，国产<br>3. Qwen：阿里开源，本地化部署方便<br>4. 通义千问：阿里闭源，中文好，企业服务完善<br>5. 文心一言：百度，中文理解好，有企业版 |
-| **成本对比** | 不同模型的成本差异有多大？ | 1. GPT-4: ~$30 / 1M tokens<br>2. GPT-3.5: ~$1 / 1M tokens<br>3. DeepSeek: ~¥1 / 1M tokens<br>4. 国产模型普遍比 OpenAI 便宜 5-10 倍 |
-| **能力差异** | 国产模型和 GPT 比，能力差距在哪里？ | 1. 复杂推理：GPT-4 明显更强<br>2. 工具调用：GPT 更稳定，国产经常参数解析失败<br>3. 中文：国产模型更好，特别是本土文化相关<br>4. 长上下文：各有千秋，DeepSeek 支持 128K |
+#### 知识点 1：模型选型
+- **面试考点**：各个模型的优缺点是什么？怎么选型？
+- **回答要点**：
+  1. GPT-5.5：旗舰通用，代码+Agent 最强，但贵
+  2. Claude Opus 4.7：编程 SWE-bench 王者，工具调用最稳
+  3. DeepSeek V4：性价比之王（约 .42/.84），开源可私部
+  4. Gemini 3.1 Pro：多模态像素级最强，1M 上下文
+  5. 国产：Kimi K2.6 多智能体并行、GLM-5.1 代码跨文件理解
 
-### 📊 主流模型详细对比表
+#### 知识点 2：成本对比
+- **面试考点**：不同模型的成本差异有多大？
+- **回答要点**：
+  1. GPT-5.5: / per 1M tokens
+  2. Claude Opus 4.7: /
+  3. Claude Sonnet 4.6: /（≈Opus 1/5 价，性能接近）
+  4. DeepSeek V4 Pro: ≈.42/.84（2.5折优惠期）
+  5. DeepSeek V4 Flash: ≈.14/.28
+  6. **旗舰 vs 性价比差距约 10-60 倍
 
-| 模型 | 价格（输入/输出） | 上下文长度 | 代码能力 | 推理能力 | 中文能力 | 推荐使用场景 |
-|------|-----------------|-----------|---------|---------|---------|-------------|
-| **GPT-4o** | $5 / $15 | 128K | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 复杂推理、核心逻辑 |
-| **GPT-3.5-turbo** | $0.5 / $1.5 | 16K | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | 普通对话、批量处理 |
-| **DeepSeek-Chat** | ¥1 / ¥2 | 128K | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | 性价比首选、代码相关 |
-| **Qwen-Max** | ¥2 / ¥6 | 32K | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | 中文场景、企业内部 |
-| **通义千问 Plus** | ¥2 / ¥6 | 32K | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | 阿里生态、企业服务 |
-| **文心一言 4.0** | ¥8 / ¥20 | 8K | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | 百度生态、合规要求 |
+#### 知识点 3：能力差异
+- **面试考点**：国产模型和 GPT 比，能力差距在哪里？
+- **回答要点**：
+  1. Agent 编码：GPT-5.5 / Claude Opus 4.7 领先，SWE-bench 明显强
+  2. 工具调用：Claude 最稳，GPT 次之，国产 V4 已大幅改善
+  3. 多模态：Gemini 像素级空间定位独一无二
+  4. 中文：国产模型更好，本土文化/公文/成语理解强
+  5. 开源私部：DeepSeek V4 MIT 协议，Kimi K2.5 Apache 2.0
 
-### 💡 选型决策树
+### 📊 主流模型详细对比表（2026-05）
 
-```
+| 模型 | 价格（输入/输出 per 1M） | 上下文 | 代码能力 | Agent能力 | 推理能力 | 推荐场景 |
+|------|------------------------|-------|---------|----------|---------|---------|
+| **GPT-5.5** |  /  | 1M | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 旗舰通用、复杂 Agent、编码 |
+| **GPT-5.4** | .5 /  | 1M | ⭐⭐⭐⭐½ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐½ | 中高负载、成本可控 |
+| **Claude Opus 4.7** |  /  | 200K | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 编程之王、安全合规 |
+| **Claude Sonnet 4.6** |  /  | 200K | ⭐⭐⭐⭐½ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | **性价比首选**、大规模部署 |
+| **Gemini 3.1 Pro** | ~ / ~ | 1M | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐½ | 多模态、视频、1M上下文 |
+| **DeepSeek V4 Pro** | ≈.42 / .84 | 128K | ⭐⭐⭐⭐ | ⭐⭐⭐½ | ⭐⭐⭐⭐ | 开源私部、极致性价比 |
+| **DeepSeek V4 Flash** | ≈.14 / .28 | 128K | ⭐⭐⭐½ | ⭐⭐⭐ | ⭐⭐⭐½ | 大批量/低延迟/成本敏感 |
+| **Kimi K2.6** | 旗舰区间 | 1M+ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐½ | ⭐⭐⭐⭐ | 多智能体并行、开源私部 |
+| **GLM-5.1** | 中端 | 200K | ⭐⭐⭐⭐½ | ⭐⭐⭐½ | ⭐⭐⭐⭐ | 跨文件代码理解、企业合规 |
+| **Qwen3-Max** | 中端 | 128K+ | ⭐⭐⭐½ | ⭐⭐⭐ | ⭐⭐⭐⭐ | 中文场景、本地部署 |
+
+### 💡 选型决策树（2026 版）
+
+`
 开始
   ↓
 有数据合规/不出境要求吗？
   ├─ 是 → 只能选国产模型
-  │      ├─ 需要本地化部署 → Qwen / Llama 等开源模型
-  │      └─ 不需要本地部署 → DeepSeek / 通义 / 文心
-  └─ 否 → 可以用 OpenAI
-         ├─ 复杂推理 / 工具调用 → GPT-4o
-         └─ 普通场景 / 成本敏感 → GPT-3.5
-```
+  │      ├─ 需要本地化部署 → DeepSeek V4（MIT 开源）/ Kimi K2.5（Apache 2.0）
+  │      ├─ 编码为主 → GLM-5.1
+  │      └─ 通用+性价比 → DeepSeek V4 Pro / Qwen3-Max
+  └─ 否 → 可以用海外模型
+         ├─ Agent 编码核心逻辑 → Claude Opus 4.7（SWE-bench 最强）
+         ├─ 通用旗舰 + Operator → GPT-5.5
+         ├─ 多模态/视频/1M 上下文 → Gemini 3.1 Pro
+         ├─ 大规模部署 + 成本敏感 → Claude Sonnet 4.6（Opus 1/5 价）
+         └─ 极致性价比 → DeepSeek V4 Flash（≈旗舰 1/60 价）
+`
+
+### ⭐ 面试加分：2026 大模型格局的 3 个关键趋势
+
+> **3 分钟回答模板**：
+>
+> **趋势一：从「生成」到「行动」**。2026 年竞争核心不是谁跑分高，而是谁的 Agent 编码能力强——编码能力直接决定 Agent 成功率、执行时间和 Token 消耗。Coding 强弱 = Agent 好不好用。
+>
+> **趋势二：成本效益成主战场**。Claude Sonnet 4.6 以 Opus 1/5 的价格提供了接近 Opus 的性能，直接颠覆了定价逻辑。企业选型从「最强」转向「最合适的性价比」。
+>
+> **趋势三：开源追赶闭源**。DeepSeek V4 和 Kimi K2.5/K2.6 在 Agent benchmark 上已经逼近 GPT-5.4 水平，且完全开源可私部。对数据安全敏感的企业，开源模型的竞争力已经够用了。
 
 ---
 
@@ -180,23 +239,41 @@ def chat_with_retry(messages):
 
 ### 📝 核心知识点 + 对应面试考点
 
-| 知识点 | 面试考点 | 回答要点 |
-|--------|---------|---------|
-| **Token 定义** | 1K Token 大概是多少字？中英文有区别吗？ | 1. 英文：约 750 个单词 = 1K Token<br>2. 中文：约 500 个汉字 = 1K Token（因为中文每个字占 2 个 Token）<br>3. 所以同样长度的中文，Token 消耗是英文的 1.5 倍 |
-| **计费方式** | Token 是怎么计费的？输入和输出分开算吗？ | 1. 输入 Token：你的 prompt 长度，算一次<br>2. 输出 Token：模型生成的内容，算一次<br>3. 输出通常比输入贵 2-3 倍<br>4. 长上下文模型 Token 单价更贵 |
-| **成本优化** | 怎么降低 Token 成本？ | 1. 用更便宜的模型（降本 5-10 倍）<br>2. 精简 System Prompt，去掉废话<br>3. 上下文压缩，只保留相关信息<br>4. 输出限制长度，不要让模型瞎扯<br>5. 批量处理，减少 API 调用次数 |
+#### 知识点 1：Token 定义
+- **面试考点**：1K Token 大概是多少字？中英文有区别吗？
+- **回答要点**：
+  1. 英文：约 750 个单词 = 1K Token
+  2. 中文：约 500 个汉字 = 1K Token（因为中文每个字占 2 个 Token）
+  3. 所以同样长度的中文，Token 消耗是英文的 1.5 倍
+
+#### 知识点 2：计费方式
+- **面试考点**：Token 是怎么计费的？输入和输出分开算吗？
+- **回答要点**：
+  1. 输入 Token：你的 prompt 长度，算一次
+  2. 输出 Token：模型生成的内容，算一次
+  3. 输出通常比输入贵 2-3 倍
+  4. 长上下文模型 Token 单价更贵
+
+#### 知识点 3：成本优化
+- **面试考点**：怎么降低 Token 成本？
+- **回答要点**：
+  1. 用更便宜的模型（降本 5-10 倍）
+  2. 精简 System Prompt，去掉废话
+  3. 上下文压缩，只保留相关信息
+  4. 输出限制长度，不要让模型瞎扯
+  5. 批量处理，减少 API 调用次数
 
 ### 💻 必写代码 3：Token 计数工具
 
 ```python
 import tiktoken
 
-def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
+def count_tokens(text: str, model: str = "gpt-5.4") -> int:
     """计算文本的 Token 数量"""
     encoding = tiktoken.encoding_for_model(model)
     return len(encoding.encode(text))
 
-def count_messages_tokens(messages: list, model: str = "gpt-3.5-turbo") -> int:
+def count_messages_tokens(messages: list, model: str = "gpt-5.4") -> int:
     """计算对话消息的总 Token 数量"""
     encoding = tiktoken.encoding_for_model(model)
     
@@ -226,11 +303,11 @@ messages = [
 ]
 print(f"对话 Token 数：{count_messages_tokens(messages)}")
 
-# 成本估算（GPT-3.5-turbo: $0.5/1M 输入，$1.5/1M 输出）
+# 成本估算（GPT-5.4: $2.5/1M 输入，$10/1M 输出，2026-05 价）
 input_tokens = count_messages_tokens(messages)
 output_tokens = 100  # 假设输出 100 Token
-input_cost = input_tokens * 0.5 / 1_000_000
-output_cost = output_tokens * 1.5 / 1_000_000
+input_cost = input_tokens * 2.5 / 1_000_000
+output_cost = output_tokens * 10.0 / 1_000_000
 print(f"预估成本：${input_cost + output_cost:.6f}")
 ```
 
@@ -250,11 +327,28 @@ print(f"预估成本：${input_cost + output_cost:.6f}")
 
 ### 📝 核心知识点 + 对应面试考点
 
-| 知识点 | 面试考点 | 回答要点 |
-|--------|---------|---------|
-| **为什么要封装** | 为什么要设计统一接口层？直接调 SDK 不行吗？ | 1. 换模型不需要改业务代码，只改配置<br>2. 统一错误处理、重试、日志<br>3. 方便添加监控和统计<br>4. 符合开闭原则：对扩展开放，对修改关闭 |
-| **设计模式** | 用什么设计模式来设计统一接口层？ | 1. 策略模式：每个模型一个策略类<br>2. 工厂模式：根据配置创建对应的实例<br>3. 适配器模式：统一不同 SDK 的接口 |
-| **抽象维度** | 统一接口需要抽象哪些维度？ | 1. chat 方法：输入 messages，输出响应<br>2. stream_chat 方法：流式输出<br>3. embed 方法：文本向量化<br>4. 通用参数：model, temperature, max_tokens |
+#### 知识点 1：为什么要封装
+- **面试考点**：为什么要设计统一接口层？直接调 SDK 不行吗？
+- **回答要点**：
+  1. 换模型不需要改业务代码，只改配置
+  2. 统一错误处理、重试、日志
+  3. 方便添加监控和统计
+  4. 符合开闭原则：对扩展开放，对修改关闭
+
+#### 知识点 2：设计模式
+- **面试考点**：用什么设计模式来设计统一接口层？
+- **回答要点**：
+  1. 策略模式：每个模型一个策略类
+  2. 工厂模式：根据配置创建对应的实例
+  3. 适配器模式：统一不同 SDK 的接口
+
+#### 知识点 3：抽象维度
+- **面试考点**：统一接口需要抽象哪些维度？
+- **回答要点**：
+  1. chat 方法：输入 messages，输出响应
+  2. stream_chat 方法：流式输出
+  3. embed 方法：文本向量化
+  4. 通用参数：model, temperature, max_tokens
 
 ### 💻 必写代码 4：统一接口层完整实现
 
@@ -278,7 +372,7 @@ class BaseLLM(ABC):
 class OpenAILLM(BaseLLM):
     """OpenAI 模型实现"""
 
-    def __init__(self, api_key: str, model: str = "gpt-3.5-turbo"):
+    def __init__(self, api_key: str, model: str = "gpt-5.4"):
         from openai import OpenAI
         self.client = OpenAI(api_key=api_key)
         self.model = model
@@ -355,11 +449,27 @@ result = llm.chat([{"role": "user", "content": "什么是 Agent？"}])
 
 ### 📝 核心知识点 + 对应面试考点
 
-| 知识点 | 面试考点 | 回答要点 |
-|--------|---------|---------|
-| **为什么需要降级** | 大模型 API 不稳定会带来什么问题？ | 1. OpenAI/DeepSeek 都有过大面积宕机<br>2. 单点依赖 = 单点故障<br>3. 没降级 = 全线业务挂掉<br>4. 生产系统必须多模型 + 自动切换 |
-| **降级三件套** | 降级、熔断、限流三者区别？ | 1. **降级**：A 模型挂了切 B 模型，保证服务可用<br>2. **熔断**：连续失败 N 次，暂停调用一段时间避免雪崩<br>3. **限流**：QPS 太高时主动拒绝，保护下游 |
-| **优先级排序** | 降级链怎么排序？ | 1. 按效果排：GPT-4o → DeepSeek → GPT-3.5<br>2. 按成本排：DeepSeek → GPT-3.5 → GPT-4o<br>3. 实战中混合：高优场景按效果，常规场景按成本 |
+#### 知识点 1：为什么需要降级
+- **面试考点**：大模型 API 不稳定会带来什么问题？
+- **回答要点**：
+  1. OpenAI/DeepSeek 都有过大面积宕机
+  2. 单点依赖 = 单点故障
+  3. 没降级 = 全线业务挂掉
+  4. 生产系统必须多模型 + 自动切换
+
+#### 知识点 2：降级三件套
+- **面试考点**：降级、熔断、限流三者区别？
+- **回答要点**：
+  1. **降级**：A 模型挂了切 B 模型，保证服务可用
+  2. **熔断**：连续失败 N 次，暂停调用一段时间避免雪崩
+  3. **限流**：QPS 太高时主动拒绝，保护下游
+
+#### 知识点 3：优先级排序
+- **面试考点**：降级链怎么排序？
+- **回答要点**：
+  1. 按效果排：GPT-5.5 → Claude Opus 4.7 → DeepSeek V4
+  2. 按成本排：DeepSeek V4 Flash → Sonnet 4.6 → GPT-5.4
+  3. 实战中混合：高优场景按效果，常规场景按成本
 
 ### 💻 必写代码 5：降级策略（含熔断）
 
@@ -408,11 +518,11 @@ class FallbackLLM:
         raise RuntimeError(f"所有模型均不可用，最后错误：{last_err}")
 
 
-# 使用：DeepSeek 优先（便宜），GPT-3.5 兜底，GPT-4o 最后保命
+# 使用：DeepSeek V4 优先（便宜），Sonnet 4.6 兜底，GPT-5.5 最后保命
 fallback_llm = FallbackLLM([
     DeepSeekLLM(api_key="xxx"),
-    OpenAILLM(api_key="xxx", model="gpt-3.5-turbo"),
-    OpenAILLM(api_key="xxx", model="gpt-4o"),
+    OpenAILLM(api_key="xxx", model="gpt-5.4"),
+    OpenAILLM(api_key="xxx", model="gpt-5.5"),
 ])
 result = fallback_llm.chat([{"role": "user", "content": "你好"}])
 ```

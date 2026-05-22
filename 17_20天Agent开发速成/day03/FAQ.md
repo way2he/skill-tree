@@ -42,8 +42,8 @@ updated_at: 2026-05-21
 **3 个最常见的原因**：
 
 #### 原因 1：模型 tokenizer 不同
-- GPT-3.5 / GPT-4 用 `cl100k_base`
-- GPT-4o 用 `o200k_base`
+- GPT-3.5 / GPT-4 用 `cl100k_base`（旧）
+- GPT-4o / GPT-5.x 用 `o200k_base`（2024 起新主流）
 - DeepSeek、Qwen、文心一言用各自的 tokenizer，**tiktoken 算不准**！
 
 国产模型推荐方法：
@@ -124,7 +124,7 @@ updated_at: 2026-05-21
   ↓
 负载均衡器（10 台 DeepSeek 实例间分流）
   ↓ （全部挂了）
-降级到 GPT-3.5
+降级到 GPT-5.4
   ↓ （也挂了）
 降级到本地 Ollama / 缓存的常见回答
   ↓ （还挂）
