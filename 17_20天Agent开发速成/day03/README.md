@@ -207,21 +207,19 @@ def chat_with_retry(messages):
 
 ### 💡 选型决策树（2026 版）
 
-`
-开始
-  ↓
-有数据合规/不出境要求吗？
-  ├─ 是 → 只能选国产模型
-  │      ├─ 需要本地化部署 → DeepSeek V4（MIT 开源）/ Kimi K2.5（Apache 2.0）
-  │      ├─ 编码为主 → GLM-5.1
-  │      └─ 通用+性价比 → DeepSeek V4 Pro / Qwen3-Max
-  └─ 否 → 可以用海外模型
-         ├─ Agent 编码核心逻辑 → Claude Opus 4.7（SWE-bench 最强）
-         ├─ 通用旗舰 + Operator → GPT-5.5
-         ├─ 多模态/视频/1M 上下文 → Gemini 3.1 Pro
-         ├─ 大规模部署 + 成本敏感 → Claude Sonnet 4.6（Opus 1/5 价）
-         └─ 极致性价比 → DeepSeek V4 Flash（≈旗舰 1/60 价）
-`
+#### 问题 1：有数据合规/不出境要求吗？
+
+**选择 A：是（只能选国产模型）**
+- 需要本地化部署 → DeepSeek V4（MIT 开源）/ Kimi K2.5（Apache 2.0）
+- 编码为主 → GLM-5.1
+- 通用+性价比 → DeepSeek V4 Pro / Qwen3-Max
+
+**选择 B：否（可以用海外模型）**
+- Agent 编码核心逻辑 → Claude Opus 4.7（SWE-bench 最强）
+- 通用旗舰 + Operator → GPT-5.5
+- 多模态/视频/1M 上下文 → Gemini 3.1 Pro
+- 大规模部署 + 成本敏感 → Claude Sonnet 4.6（Opus 1/5 价）
+- 极致性价比 → DeepSeek V4 Flash（≈旗舰 1/60 价）
 
 ### ⭐ 面试加分：2026 大模型格局的 3 个关键趋势
 
