@@ -24,7 +24,7 @@ from typing import Any, Generator, Optional
 from ollama import Client, AsyncClient
 
 
-DEFAULT_MODEL: str = "qwen2.5:7b"
+DEFAULT_MODEL: str = "qwen3.5:9b"
 DEFAULT_HOST: str = "http://localhost:11434"
 
 

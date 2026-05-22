@@ -1,0 +1,41 @@
+# LLM 统一接口层 - 示例配置
+default_provider: deepseek
+
+providers:
+  deepseek:
+    provider_type: requests
+    model: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY}
+    base_url: https://api.deepseek.com/v1
+  
+  claude:
+    provider_type: anthropic
+    model: claude-sonnet-4-20250514
+    api_key: ${ANTHROPIC_API_KEY}
+  
+  local:
+    provider_type: ollama
+    model: qwen2.5:7b
+
+resilience:
+  # 重试配置
+  retry_max_retries: 3
+  retry_base_delay: 1.0
+  retry_max_delay: 60.0
+  retry_exponential_base: 2.0
+  retry_jitter: true
+  
+  # 熔断器配置
+  circuit_breaker_enabled: true
+  circuit_breaker_failure_threshold: 5
+  circuit_breaker_recovery_timeout: 30.0
+  circuit_breaker_half_open_max_calls: 3
+  circuit_breaker_success_threshold: 2
+  
+  # 限流器配置
+  rate_limiter_enabled: true
+  rate_limiter_requests_per_minute: 60
+  rate_limiter_burst_size: 10
+  
+  # 降级配置
+  fallback_providers: [claude, local]
