@@ -12,7 +12,7 @@ Day02 必写代码 1：角色设定方法论
 
 import sys
 sys.path.append("..")
-from llm.openai import chat_completion, get_response_content
+from llm.ollama.client import OllamaOfficialClient
 
 
 # ============================================================
@@ -80,14 +80,30 @@ def get_user(user_id):
 """
 
 
-def review_code(system_prompt: str, code: str) -> str:
-    """用指定的 system prompt 审查代码"""
+def review_code(system_prompt: str, code: str, model: str = "qwen2.5:7b") -> str:
+    """
+    用指定的 system prompt 审查代码
+    
+    Args:
+        system_prompt: 系统提示词
+        code: 待审查的代码
+        model: Ollama 模型名称，默认 qwen2.5:7b
+    
+    Returns:
+        str: 模型返回的审查结果
+    """
+    # 初始化 Ollama 客户端
+    client = OllamaOfficialClient()
+    
+    # 构建消息列表
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"请审查这段代码：\n{code}"}
     ]
-    response = chat_completion(model="gpt-3.5-turbo", messages=messages, temperature=0.3)
-    return get_response_content(response)
+    
+    # 调用 Ollama chat API
+    response = client.chat(messages=messages, temperature=0.3)
+    return response
 
 
 def compare_prompts():
