@@ -5,7 +5,7 @@
 
 import json
 import os
-from typing import Any
+from typing import Any, Iterator
 
 import requests
 
@@ -18,11 +18,11 @@ class OllamaClient(BaseLLMClient):
     API 文档: https://github.com/ollama/ollama/blob/main/docs/api.md
 
     使用示例:
-        client = OllamaClient(model="qwen2.5:7b", base_url="http://localhost:11434")
+        client = OllamaClient(model="qwen3.5:9b", base_url="http://localhost:11434")
         response = client.generate("你好，请介绍一下自己")
 
     Args:
-        model: 模型名称，如 "qwen2.5:7b", "llama3:8b", "mistral:7b"
+        model: 模型名称，如 "qwen3.5:9b", "llama3:8b", "mistral:7b"
         base_url: Ollama 服务地址，默认 http://localhost:11434
         system_prompt: 系统提示词，用于设置模型行为
         temperature: 温度参数，控制输出随机性 (0-2，默认0.7)
@@ -31,11 +31,11 @@ class OllamaClient(BaseLLMClient):
 
     def __init__(
         self,
-        model: str = "qwen2.5:7b",
+        model: str = "qwen3.5:9b",
         base_url: str = "http://localhost:11434",
         system_prompt: str | None = None,
         temperature: float = 0.7,
-        timeout: int = 120,
+        timeout: int = 600,
     ):
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -71,6 +71,35 @@ class OllamaClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["response"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any) -> Iterator[str]:
+        """流式生成（Ollama NDJSON，每行一个 JSON）"""
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "prompt": prompt,
+            "system": self.system_prompt,
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        with requests.post(
+            f"{self.base_url}/api/generate",
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw:
+                    continue
+                try:
+                    obj = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                piece = obj.get("response") or ""
+                if piece:
+                    yield piece
+                if obj.get("done"):
+                    break
 
     def generate_json(
         self, prompt: str, schema: dict[str, Any] | None = None, **kwargs: Any

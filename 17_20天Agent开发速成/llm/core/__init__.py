@@ -47,6 +47,39 @@ from .factory import (
     list_async_providers
 )
 
+# 导出默认实例工厂（调用方零参数获取 LLM）
+from .default import (
+    get_llm,
+    get_async_llm,
+    current_provider,
+    resolve_provider,
+    current_backend,
+    resolve_provider_and_backend,
+)
+
+# 导出底层实现选择器（一键配置、Builder、Switcher）
+from .backend import (
+    # 枚举和类型
+    BackendType,
+    BackendLike,
+    BackendConfig,
+    # 一键配置 API
+    set_default_backend,
+    get_default_backend,
+    reset_default_backend,
+    resolve_backend,
+    # Builder 模式
+    LLMClientBuilder,
+    # 便捷函数
+    create_client,
+    create_async_client,
+    # 运行时切换
+    BackendSwitcher,
+)
+
+# 导出厂商枚举（动态生成，避免硬编码字符串）
+from .providers import ProviderName, ProviderLike
+
 # 导出适配器
 from .adapter import (
     BaseLLMAdapter,
@@ -87,7 +120,14 @@ from .observer import (
     LLMEvent,
     EventBus,
     LoggingHandler,
-    MetricsHandler
+    MetricsHandler,
+    enable_logging,
+    disable_logging,
+    is_logging_enabled,
+    get_metrics_handler,
+    subscribe,
+    unsubscribe,
+    publish,
 )
 
 __all__ = [
@@ -121,6 +161,26 @@ __all__ = [
     "create_async_llm",
     "list_providers",
     "list_async_providers",
+    "get_llm",
+    "get_async_llm",
+    "current_provider",
+    "resolve_provider",
+    "current_backend",
+    "resolve_provider_and_backend",
+    "ProviderName",
+    "ProviderLike",
+    # 底层实现选择器
+    "BackendType",
+    "BackendLike",
+    "BackendConfig",
+    "set_default_backend",
+    "get_default_backend",
+    "reset_default_backend",
+    "resolve_backend",
+    "LLMClientBuilder",
+    "create_client",
+    "create_async_client",
+    "BackendSwitcher",
     # 适配器
     "BaseLLMAdapter",
     "BaseAsyncLLMAdapter",
@@ -153,5 +213,12 @@ __all__ = [
     "LLMEvent",
     "EventBus",
     "LoggingHandler",
-    "MetricsHandler"
+    "MetricsHandler",
+    "enable_logging",
+    "disable_logging",
+    "is_logging_enabled",
+    "get_metrics_handler",
+    "subscribe",
+    "unsubscribe",
+    "publish",
 ]

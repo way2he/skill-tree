@@ -13,7 +13,7 @@ class DeepSeekClient(OpenAICompatibleClient):
     """
     DeepSeek 客户端
 
-    使用 DeepSeek 官方 API，支持 deepseek-chat、deepseek-coder 等模型。
+    使用 DeepSeek 官方 API，支持 deepseek-v4-flash、deepseek-v4-pro 等模型。
     通过设置 DEEPSEEK_API_KEY 环境变量或传入 api_key 参数进行认证。
 
     Attributes:
@@ -22,8 +22,8 @@ class DeepSeekClient(OpenAICompatibleClient):
         ENV_API_KEY: 环境变量中 API Key 的名称
     """
 
-    DEFAULT_BASE_URL: str = "https://api.deepseek.com/v1"
-    DEFAULT_MODEL: str = "deepseek-chat"
+    DEFAULT_BASE_URL: str = "https://api.deepseek.com"
+    DEFAULT_MODEL: str = "deepseek-v4-flash"
     ENV_API_KEY: str = "DEEPSEEK_API_KEY"
 
     def __init__(
@@ -41,7 +41,7 @@ class DeepSeekClient(OpenAICompatibleClient):
         Args:
             api_key: API 密钥，若为 None 则从环境变量 DEEPSEEK_API_KEY 获取
             model: 模型名称，默认为 deepseek-chat
-            base_url: API 基础地址，默认为 https://api.deepseek.com/v1
+            base_url: API 基础地址，默认为 https://api.deepseek.com
             system_prompt: 系统提示词
             temperature: 温度参数，控制生成随机性 (0-2)
             max_tokens: 最大输出 token 数

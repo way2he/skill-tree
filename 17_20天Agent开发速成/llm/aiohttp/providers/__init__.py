@@ -69,4 +69,56 @@ __all__ = [
     "AsyncSparkClient",
     "AsyncBaichuanClient",
     "AsyncYiClient",
+    # 工厂函数
+    "create_client",
 ]
+
+
+_CLIENT_MAP = {
+    "ollama": AsyncOllamaClient,
+    "openai": AsyncOpenAIClient,
+    "anthropic": AsyncAnthropicClient,
+    "doubao": AsyncDoubaoClient,
+    "qwen": AsyncQwenClient,
+    "glm": AsyncGLMClient,
+    "wenxin": AsyncWenxinClient,
+    "kimi": AsyncKimiClient,
+    "deepseek": AsyncDeepSeekClient,
+    "minimax": AsyncMiniMaxClient,
+    "xai": AsyncXAIClient,
+    "cohere": AsyncCohereClient,
+    "hunyuan": AsyncHunyuanOpenAIClient,
+    "pangu": AsyncPanguClient,
+    "mistral": AsyncMistralClient,
+    "together": AsyncTogetherClient,
+    "milm": AsyncMiLMClient,
+    "google": AsyncGoogleClient,
+    "meta": AsyncMetaClient,
+    "shangtang": AsyncShangtangClient,
+    "stepfun": AsyncStepfunClient,
+    "tiangong": AsyncTiangongClient,
+    "spark": AsyncSparkClient,
+    "baichuan": AsyncBaichuanClient,
+    "yi": AsyncYiClient,
+}
+
+
+def create_client(provider: str, **kwargs) -> BaseAsyncLLMClient:
+    """异步 LLM 客户端工厂函数。
+
+    Args:
+        provider: 提供商名称（小写），如 "openai", "deepseek", "qwen" 等
+        **kwargs: 传递给客户端的参数
+
+    Returns:
+        对应的异步 LLM 客户端实例
+
+    Raises:
+        ValueError: provider 未注册
+    """
+    name = provider.lower()
+    if name not in _CLIENT_MAP:
+        raise ValueError(
+            f"不支持的 async provider: {provider}，可选: {list(_CLIENT_MAP.keys())}"
+        )
+    return _CLIENT_MAP[name](**kwargs)

@@ -181,3 +181,47 @@ class HunyuanClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["Response"]["Choices"][0]["Message"]["Content"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（混元 SSE，与本类简化签名风格保持一致）"""
+        timestamp = int(time.time())
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload: dict[str, Any] = {
+            "SecretId": self.secret_id,
+            "Signature": self._generate_signature(timestamp),
+            "Timestamp": timestamp,
+            "Nonce": timestamp,
+            "Model": self.model,
+            "Messages": self._build_messages(prompt),
+            "Temperature": kwargs.get("temperature", self.temperature),
+            "Stream": True,
+        }
+        with requests.post(
+            self.base_url,
+            headers=headers,
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw or not raw.startswith("data:"):
+                    continue
+                data = raw[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(data)
+                    # 兼容大小写字段：Choices/choices、Delta/delta、Content/content
+                    choices = obj.get("Choices") or obj.get("choices") or []
+                    if not choices:
+                        continue
+                    delta = choices[0].get("Delta") or choices[0].get("delta") or {}
+                    piece = delta.get("Content") or delta.get("content") or ""
+                    if piece:
+                        yield piece
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue

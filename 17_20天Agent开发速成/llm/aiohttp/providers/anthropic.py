@@ -99,3 +99,42 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
                 response.raise_for_status()
                 result = await response.json()
                 return str(result["content"][0]["text"])
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（Anthropic SSE，异步）"""
+        import json as _json
+        headers = {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": kwargs.get("max_tokens", 4096),
+            "temperature": kwargs.get("temperature", self.temperature),
+            "system": self.system_prompt or "",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                self.base_url, headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    try:
+                        obj = _json.loads(data)
+                    except _json.JSONDecodeError:
+                        continue
+                    if obj.get("type") == "content_block_delta":
+                        piece = obj.get("delta", {}).get("text") or ""
+                        if piece:
+                            yield piece
+                    elif obj.get("type") == "message_stop":
+                        break

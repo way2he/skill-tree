@@ -105,3 +105,39 @@ class AsyncYiClient(BaseAsyncLLMClient):
                 response.raise_for_status()
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（OpenAI 兼容 SSE，异步）"""
+        import json as _json
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": self._build_messages(prompt),
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                f"{self.base_url}/chat/completions", headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = _json.loads(data)
+                        delta = obj["choices"][0].get("delta", {})
+                        piece = delta.get("content") or ""
+                        if piece:
+                            yield piece
+                    except (_json.JSONDecodeError, KeyError, IndexError):
+                        continue

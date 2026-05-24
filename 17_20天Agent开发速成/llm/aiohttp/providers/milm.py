@@ -148,3 +148,44 @@ class AsyncMiLMClient(BaseAsyncLLMClient):
             stream=stream,
             **kwargs,
         )
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（OpenAI 兼容 SSE，异步）"""
+        import json as _json
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        messages: list[dict[str, str]] = []
+        sys_p = getattr(self, "system_prompt", None)
+        if sys_p:
+            messages.append({"role": "system", "content": sys_p})
+        messages.append({"role": "user", "content": prompt})
+        payload: dict[str, Any] = {
+            "model": kwargs.get("model") or self.model,
+            "messages": messages,
+            "temperature": kwargs.get("temperature", 0.7),
+            "stream": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                f"{self.base_url}/chat/completions", headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = _json.loads(data)
+                        delta = obj["choices"][0].get("delta", {})
+                        piece = delta.get("content") or ""
+                        if piece:
+                            yield piece
+                    except (_json.JSONDecodeError, KeyError, IndexError):
+                        continue

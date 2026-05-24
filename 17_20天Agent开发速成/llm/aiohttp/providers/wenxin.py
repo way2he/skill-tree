@@ -101,3 +101,41 @@ class AsyncWenxinClient(BaseAsyncLLMClient):
                 if "error_code" in result:
                     raise Exception(f"文心一言 API 错误: {result}")
                 return str(result.get("result", ""))
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（文心 SSE：data: {"result": "...", "is_end": bool}，异步）"""
+        import json as _json
+        url = f"{self.base_url}/{self.model}?access_token={self.api_key}"
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        messages: list[dict[str, str]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        payload: dict[str, Any] = {
+            "messages": messages,
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, headers=headers, json=payload) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if not data:
+                        continue
+                    try:
+                        obj = _json.loads(data)
+                        piece = obj.get("result") or ""
+                        if piece:
+                            yield piece
+                        if obj.get("is_end"):
+                            break
+                    except _json.JSONDecodeError:
+                        continue

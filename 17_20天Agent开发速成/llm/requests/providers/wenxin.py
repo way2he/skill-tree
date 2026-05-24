@@ -169,3 +169,40 @@ class WenxinClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["result"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（文心 SSE：data: {"result": "..."}）"""
+        access_token = self._get_access_token()
+        url = f"{self.base_url}?access_token={access_token}"
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload: dict[str, Any] = {
+            "messages": self._build_messages(prompt),
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        with requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw or not raw.startswith("data:"):
+                    continue
+                data = raw[5:].strip()
+                if not data:
+                    continue
+                try:
+                    obj = json.loads(data)
+                    piece = obj.get("result") or ""
+                    if piece:
+                        yield piece
+                    if obj.get("is_end"):
+                        break
+                except json.JSONDecodeError:
+                    continue

@@ -4,7 +4,7 @@ LLM 统一接口层 - 组合弹性装饰器
 """
 
 import functools
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, List
 
 from .retry import RetryPolicy, with_retry, with_async_retry
@@ -16,10 +16,10 @@ from .fallback import FallbackStrategy, AsyncFallbackStrategy
 @dataclass
 class ResilienceConfig:
     """弹性配置（组合所有配置）"""
-    retry: RetryPolicy = RetryPolicy()
+    retry: RetryPolicy = field(default_factory=RetryPolicy)
     circuit_breaker: Optional[CircuitBreakerConfig] = None
     rate_limiter: Optional[RateLimiterConfig] = None
-    fallback_providers: List[Any] = None
+    fallback_providers: List[Any] = field(default_factory=list)
 
 
 def resilient(

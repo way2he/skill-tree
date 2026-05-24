@@ -13,8 +13,10 @@ llm.anthropic.providers - Anthropic SDK Provider 实现
 """
 
 from .anthropic import AnthropicSDKClient
+from .deepseek import DeepSeekSDKClient
 
 
 __all__ = [
     "AnthropicSDKClient",
+    "DeepSeekSDKClient",
 ]

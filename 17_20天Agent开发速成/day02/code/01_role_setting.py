@@ -80,14 +80,14 @@ def get_user(user_id):
 """
 
 
-def review_code(system_prompt: str, code: str, model: str = "qwen2.5:7b") -> str:
+def review_code(system_prompt: str, code: str, model: str = "qwen3.5:9b") -> str:
     """
     用指定的 system prompt 审查代码
     
     Args:
         system_prompt: 系统提示词
         code: 待审查的代码
-        model: Ollama 模型名称，默认 qwen2.5:7b
+        model: Ollama 模型名称，默认 qwen3.5:9b
     
     Returns:
         str: 模型返回的审查结果

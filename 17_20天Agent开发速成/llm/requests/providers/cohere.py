@@ -142,3 +142,40 @@ class CohereClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["text"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（Cohere v1/chat NDJSON 流）"""
+        headers: dict[str, str] = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Cohere-Version": "2024-05-22",
+            "Accept": "application/json",
+        }
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "message": prompt,
+            "temperature": kwargs.get("temperature", self.temperature),
+            "preamble": self.system_prompt,
+            "stream": True,
+        }
+        with requests.post(
+            f"{self.base_url}/chat",
+            headers=headers,
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw:
+                    continue
+                try:
+                    obj = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if obj.get("event_type") == "text-generation":
+                    piece = obj.get("text") or ""
+                    if piece:
+                        yield piece
+                elif obj.get("event_type") == "stream-end":
+                    break

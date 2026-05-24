@@ -129,3 +129,47 @@ class GoogleClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["candidates"][0]["content"]["parts"][0]["text"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（Gemini :streamGenerateContent + SSE）"""
+        stream_url = self.base_url.replace(":generateContent", ":streamGenerateContent")
+        url = f"{stream_url}?alt=sse&key={self.api_key}"
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        contents = [{"role": "user", "parts": [{"text": prompt}]}]
+        if self.system_prompt:
+            contents.insert(0, {"role": "model", "parts": [{"text": self.system_prompt}]})
+        payload: dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": kwargs.get("temperature", self.temperature),
+            },
+        }
+        with requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw or not raw.startswith("data:"):
+                    continue
+                data = raw[5:].strip()
+                if not data:
+                    continue
+                try:
+                    obj = json.loads(data)
+                    cands = obj.get("candidates") or []
+                    if not cands:
+                        continue
+                    parts = (cands[0].get("content") or {}).get("parts") or []
+                    for part in parts:
+                        piece = part.get("text") or ""
+                        if piece:
+                            yield piece
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue

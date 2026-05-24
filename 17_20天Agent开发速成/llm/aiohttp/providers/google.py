@@ -90,3 +90,45 @@ class AsyncGoogleClient(BaseAsyncLLMClient):
                 response.raise_for_status()
                 result = await response.json()
                 return str(result["candidates"][0]["content"]["parts"][0]["text"])
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（Gemini :streamGenerateContent + SSE，异步）"""
+        import json as _json
+        stream_url = self.base_url.replace(":generateContent", ":streamGenerateContent")
+        url = f"{stream_url}?alt=sse&key={self.api_key}"
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        contents = [{"role": "user", "parts": [{"text": prompt}]}]
+        if self.system_prompt:
+            contents.insert(0, {"role": "model", "parts": [{"text": self.system_prompt}]})
+        payload: dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": kwargs.get("temperature", self.temperature),
+            },
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, headers=headers, json=payload) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if not data:
+                        continue
+                    try:
+                        obj = _json.loads(data)
+                        cands = obj.get("candidates") or []
+                        if not cands:
+                            continue
+                        parts = (cands[0].get("content") or {}).get("parts") or []
+                        for part in parts:
+                            piece = part.get("text") or ""
+                            if piece:
+                                yield piece
+                    except (_json.JSONDecodeError, KeyError, IndexError):
+                        continue

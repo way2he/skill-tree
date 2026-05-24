@@ -107,3 +107,40 @@ class AsyncCohereClient(BaseAsyncLLMClient):
                 response.raise_for_status()
                 result = await response.json()
                 return str(result["text"])
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（Cohere v1/chat NDJSON，异步）"""
+        import json as _json
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Cohere-Version": "2024-05-22",
+            "Accept": "application/json",
+        }
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "message": prompt,
+            "temperature": kwargs.get("temperature", self.temperature),
+            "preamble": self.system_prompt,
+            "stream": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                f"{self.base_url}/chat", headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = _json.loads(line)
+                    except _json.JSONDecodeError:
+                        continue
+                    if obj.get("event_type") == "text-generation":
+                        piece = obj.get("text") or ""
+                        if piece:
+                            yield piece
+                    elif obj.get("event_type") == "stream-end":
+                        break

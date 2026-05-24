@@ -15,7 +15,7 @@ Ollama SDK 特性:
 - OLLAMA_API_KEY: Ollama API 密钥 (用于云端模型)
 
 默认模型:
-- qwen2.5:7b
+- qwen3.5:9b
 """
 
 import json

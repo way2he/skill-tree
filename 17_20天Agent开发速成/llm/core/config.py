@@ -61,6 +61,7 @@ class ProviderConfig:
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     timeout: Optional[float] = None
+    backend: Optional[str] = None  # 新增：底层实现类型
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -68,6 +69,7 @@ class ProviderConfig:
 class LLMCoreConfig:
     """LLM 核心配置模型"""
     default_provider: Optional[str] = None
+    default_backend: Optional[str] = None  # 新增：全局默认底层实现
     providers: Dict[str, ProviderConfig] = field(default_factory=dict)
     resilience: ResilienceConfigModel = field(default_factory=ResilienceConfigModel)
 
@@ -193,6 +195,7 @@ def _parse_config(config_dict: Dict[str, Any]) -> LLMCoreConfig:
             temperature=provider_data.get('temperature'),
             max_tokens=provider_data.get('max_tokens'),
             timeout=provider_data.get('timeout'),
+            backend=provider_data.get('backend'),  # 新增：解析 backend 字段
             extra=provider_data.get('extra', {})
         )
     
@@ -218,6 +221,7 @@ def _parse_config(config_dict: Dict[str, Any]) -> LLMCoreConfig:
     
     return LLMCoreConfig(
         default_provider=config_dict.get('default_provider'),
+        default_backend=config_dict.get('default_backend'),  # 新增：解析全局默认 backend
         providers=providers,
         resilience=resilience
     )

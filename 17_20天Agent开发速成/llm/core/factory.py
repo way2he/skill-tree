@@ -1,6 +1,6 @@
 """
 LLM 统一接口层 - 工厂与注册表
-提供提供者注册和创建功能
+提供提供者注册和创建功能，支持多实现层
 """
 
 from typing import Dict, Any, Optional, Callable, Type
@@ -21,23 +21,21 @@ from .adapter import (
 
 class LLMRegistry:
     """LLM 注册表
-    
-    管理提供者的注册和创建
+
+    管理提供者的注册和创建，支持多实现层（requests/aiohttp/openai_sdk/native_sdk）
     """
-    
+
     def __init__(self):
         """初始化注册表"""
-        # 同步注册表
-        self._sync_registry: Dict[
-            str, 
-            Dict[str, Any]
-        ] = {}
-        
-        # 异步注册表
-        self._async_registry: Dict[
-            str, 
-            Dict[str, Any]
-        ] = {}
+        # 同步注册表: {registry_key: entry}
+        # registry_key 格式: {provider} 或 {provider}:{backend}
+        self._sync_registry: Dict[str, Dict[str, Any]] = {}
+
+        # 异步注册表: {registry_key: entry}
+        self._async_registry: Dict[str, Dict[str, Any]] = {}
+
+        # 实现层映射: {provider: {backend: registry_key}}
+        self._backend_mapping: Dict[str, Dict[str, str]] = {}
     
     def register(
         self,
@@ -192,11 +190,80 @@ class LLMRegistry:
     
     def list_async_providers(self) -> list[str]:
         """列出所有已注册的异步提供者
-        
+
         Returns:
             提供者名称列表
         """
         return list(self._async_registry.keys())
+
+    # ========== 新增：多实现层支持 ==========
+
+    def register_with_backend(
+        self,
+        provider: str,
+        backend: str,
+        client_factory: Callable[..., Any],
+        adapter_class: Type[BaseLLMAdapter],
+        is_async: bool = False,
+        provider_type: Optional[ProviderType] = None
+    ) -> None:
+        """
+        注册指定实现层的提供者
+
+        Args:
+            provider: 厂商名称
+            backend: 实现类型（requests/aiohttp/openai_sdk/native_sdk）
+            client_factory: 客户端工厂函数
+            adapter_class: 适配器类
+            is_async: 是否为异步实现
+            provider_type: 提供者类型（可选）
+        """
+        # 生成注册表键
+        # requests 是默认实现，使用原始键名 {provider}
+        # 其他实现使用 {provider}:{backend}
+        registry_key = provider if backend == "requests" else f"{provider}:{backend}"
+
+        # 注册到对应注册表
+        entry = {
+            "client_factory": client_factory,
+            "adapter_class": adapter_class,
+            "provider_type": provider_type,
+            "backend": backend
+        }
+
+        if is_async:
+            self._async_registry[registry_key] = entry
+        else:
+            self._sync_registry[registry_key] = entry
+
+        # 更新实现层映射
+        if provider not in self._backend_mapping:
+            self._backend_mapping[provider] = {}
+        self._backend_mapping[provider][backend] = registry_key
+
+    def list_backends(self, provider: str) -> list[str]:
+        """
+        列出厂商支持的所有实现层
+
+        Args:
+            provider: 厂商名称
+
+        Returns:
+            支持的实现类型列表
+        """
+        return list(self._backend_mapping.get(provider, {}).keys())
+
+    def get_supported_backends(self) -> Dict[str, list[str]]:
+        """
+        获取所有厂商支持的实现层
+
+        Returns:
+            {厂商: [支持的实现类型]} 映射
+        """
+        return {
+            provider: list(backends.keys())
+            for provider, backends in self._backend_mapping.items()
+        }
 
 
 # 全局注册表实例
@@ -354,6 +421,10 @@ def _register_builtin_providers():
             # 这里简化处理，实际项目中可以根据需要注册更多异步厂商
             async_providers = [
                 "ollama", "openai", "anthropic", "deepseek", "qwen",
+                "glm", "wenxin", "kimi", "doubao", "minimax",
+                "cohere", "hunyuan", "pangu", "mistral", "together",
+                "milm", "xai", "google", "meta", "shangtang",
+                "stepfun", "tiangong", "spark", "baichuan", "yi",
             ]
             
             for name in async_providers:

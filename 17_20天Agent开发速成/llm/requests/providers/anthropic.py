@@ -5,7 +5,7 @@
 
 import json
 import os
-from typing import Any
+from typing import Any, Iterator
 
 import requests
 
@@ -85,6 +85,45 @@ class AnthropicClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["content"][0]["text"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any) -> Iterator[str]:
+        """流式生成（Anthropic SSE，只取 content_block_delta.delta.text）"""
+        headers: dict[str, str] = {
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": kwargs.get("max_tokens", 4096),
+            "temperature": kwargs.get("temperature", self.temperature),
+            "system": self.system_prompt or "",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+        }
+        with requests.post(
+            self.base_url,
+            headers=headers,
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw or not raw.startswith("data:"):
+                    continue
+                data = raw[5:].strip()
+                try:
+                    obj = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                if obj.get("type") == "content_block_delta":
+                    piece = obj.get("delta", {}).get("text") or ""
+                    if piece:
+                        yield piece
+                elif obj.get("type") == "message_stop":
+                    break
 
     def generate_json(
         self, prompt: str, schema: dict[str, Any] | None = None, **kwargs: Any

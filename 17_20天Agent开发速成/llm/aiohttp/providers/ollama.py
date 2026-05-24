@@ -82,3 +82,33 @@ class AsyncOllamaClient(BaseAsyncLLMClient):
                 if not response_str.strip():
                     raise ValueError("Ollama 返回的响应为空")
                 return response_str
+
+    async def generate_stream(self, prompt: str, **kwargs: Any):
+        """流式生成（Ollama NDJSON，异步）"""
+        import json as _json
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "prompt": prompt,
+            "system": self.system_prompt,
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                f"{self.base_url}/api/generate", json=payload
+            ) as response:
+                response.raise_for_status()
+                async for raw in response.content:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = _json.loads(line)
+                    except _json.JSONDecodeError:
+                        continue
+                    piece = obj.get("response") or ""
+                    if piece:
+                        yield piece
+                    if obj.get("done"):
+                        break

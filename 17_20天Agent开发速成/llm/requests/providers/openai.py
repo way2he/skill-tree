@@ -5,7 +5,7 @@
 
 import json
 import os
-from typing import Any
+from typing import Any, Iterator
 
 import requests
 
@@ -99,6 +99,48 @@ class OpenAIClient(BaseLLMClient):
         )
         response.raise_for_status()
         return str(response.json()["choices"][0]["message"]["content"])
+
+    def generate_stream(self, prompt: str, **kwargs: Any) -> Iterator[str]:
+        """流式生成（SSE）
+
+        按 OpenAI Chat Completions SSE 协议逐 chunk 返回 delta.content。
+
+        Yields:
+            逐个返回的文本片段
+        """
+        headers: dict[str, str] = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": self._build_messages(prompt),
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        with requests.post(
+            f"{self.base_url}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=kwargs.get("timeout", self.timeout),
+            stream=True,
+        ) as resp:
+            resp.raise_for_status()
+            for raw in resp.iter_lines(decode_unicode=True):
+                if not raw or not raw.startswith("data:"):
+                    continue
+                data = raw[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(data)
+                    delta = obj["choices"][0].get("delta", {})
+                    piece = delta.get("content") or ""
+                    if piece:
+                        yield piece
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
 
     def generate_json(
         self, prompt: str, schema: dict[str, Any] | None = None, **kwargs: Any
