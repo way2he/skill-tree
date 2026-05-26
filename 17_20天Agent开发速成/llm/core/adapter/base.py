@@ -1,21 +1,141 @@
+# -*- coding: utf-8 -*-
 """
 LLM 统一接口层 - 适配器基类
-定义了同步和异步适配器的基础接口
 
-本文件同时提供“子类方法自动插桩”能力：所有适配器的
-``generate`` / ``generate_json`` / ``generate_stream`` 会被自动包装，
-在调用前后向全局 EventBus 发布 ``REQUEST_START`` /
-``REQUEST_SUCCESS`` / ``REQUEST_FAILURE`` 事件，以供 LoggingHandler
-、MetricsHandler 等订阅者使用。
-子类无需手动接入 logging。
+定义模型无关接口和向后兼容的旧适配器基类。
+
+新版架构：
+    - IProviderClient: 底层客户端协议
+    - IAdapter: 适配器接口
+    - UnifiedAdapter: 统一适配器实现
+
+旧版（向后兼容）：
+    - BaseLLMAdapter: 旧版同步适配器基类
+    - BaseAsyncLLMAdapter: 旧版异步适配器基类
 """
 
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, AsyncGenerator, Generator, Iterator, AsyncIterator, TypeVar, Protocol, runtime_checkable
+
+
+# =============================================================================
+# 类型定义
+# =============================================================================
+
+T = TypeVar('T')
+
+
+@dataclass
+class LLMResult:
+    """
+    通用 LLM 响应结构
+    """
+    content: str
+    raw_response: Any = None
+    model: str | None = None
+    usage: dict | None = None
+    finish_reason: str | None = None
+
+
+@dataclass
+class StreamChunk:
+    """
+    流式响应块
+    """
+    content: str
+    is_final: bool = False
+    usage: dict | None = None
+
+
+# =============================================================================
+# 底层客户端接口
+# =============================================================================
+
+@runtime_checkable
+class IProviderClient(Protocol):
+    """底层客户端协议"""
+    @property
+    def provider_name(self) -> str: ...
+    @property
+    def default_model(self) -> str: ...
+    def generate(self, prompt: str, **kwargs) -> str: ...
+    def generate_stream(self, prompt: str, **kwargs) -> Iterator[str]: ...
+    async def agenerate(self, prompt: str, **kwargs) -> str: ...
+    async def agenerate_stream(self, prompt: str, **kwargs) -> AsyncIterator[str]: ...
+
+
+class IAdapter(ABC):
+    """适配器接口"""
+    def __init__(self, client: IProviderClient) -> None:
+        self._client = client
+
+    @property
+    def provider_name(self) -> str:
+        return self._client.provider_name
+
+    @property
+    def default_model(self) -> str:
+        return self._client.default_model
+
+    @abstractmethod
+    def generate(self, prompt: str, **kwargs) -> str: ...
+
+    @abstractmethod
+    async def agenerate(self, prompt: str, **kwargs) -> str: ...
+
+
+# =============================================================================
+# 事件发布
+# =============================================================================
+
+def publish_llm_event(
+    event_type: str,
+    provider: str,
+    model: str | None,
+    prompt: str | None = None,
+    response: str | None = None,
+    error: Exception | None = None,
+    latency_ms: float | None = None,
+    request_id: str | None = None,
+) -> None:
+    """发布 LLM 事件到 EventBus"""
+    try:
+        from ..observer.event_bus import publish
+        from ..observer.events import EventType, LLMEvent
+        import uuid
+
+        event_type_map = {
+            "REQUEST_START": EventType.REQUEST_START,
+            "REQUEST_SUCCESS": EventType.REQUEST_SUCCESS,
+            "REQUEST_FAILURE": EventType.REQUEST_FAILURE,
+        }
+        event_enum = event_type_map.get(event_type, EventType.REQUEST_START)
+
+        event = LLMEvent(
+            event_type=event_enum,
+            request_id=request_id or uuid.uuid4().hex,
+            provider=provider,
+            model=model,
+            method="generate",
+            prompt=prompt[:4096] if prompt else None,
+            params={},
+            response=response[:4096] if response else None,
+            error=error,
+            latency_ms=latency_ms,
+        )
+        publish(event)
+    except ImportError:
+        pass
+
+
+# =============================================================================
+# 向后兼容：旧的适配器基类
+# =============================================================================
+
 import functools
-import inspect
 import time
 import uuid
-from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, Callable, Generator
 
 from ..exceptions import LLMError
 from ..types import LLMResponse
@@ -23,17 +143,13 @@ from ..observer.event_bus import publish as _publish_event
 from ..observer.events import EventType as _EventType, LLMEvent as _LLMEvent
 
 
-# =============================================================================
-# 内部工具：适配器方法自动插桩
-# =============================================================================
-
 _INSTRUMENTED_FLAG = "__llm_instrumented__"
 _SYNC_METHODS = ("generate", "generate_json", "generate_stream")
 _ASYNC_METHODS = ("generate", "generate_json", "generate_stream")
 
 
 def _safe_str(value: Any, limit: int = 4096) -> str:
-    """安全地将任意值转为字符串，避免调用失败"""
+    """安全地将任意值转为字符串"""
     try:
         s = value if isinstance(value, str) else str(value)
     except Exception:
@@ -47,15 +163,11 @@ def _build_start_event(self: Any, method: str, prompt: Any, kwargs: dict) -> _LL
     """构建 REQUEST_START 事件"""
     provider = getattr(self, "provider_name", None)
     model = kwargs.get("model") or getattr(self, "default_model", None)
-    backend = getattr(self, "backend_name", None) or getattr(
-        self.__class__, "_default_backend_name", None
-    )
     return _LLMEvent(
         event_type=_EventType.REQUEST_START,
         request_id=uuid.uuid4().hex,
         provider=provider,
         model=model,
-        backend=backend,
         method=method,
         prompt=_safe_str(prompt) if prompt is not None else None,
         params={k: v for k, v in kwargs.items() if k != "prompt"},
@@ -94,8 +206,8 @@ def _publish_failure(start_event: _LLMEvent, error: BaseException, latency_ms: f
     ))
 
 
-def _instrument_sync_method(func: Callable[..., Any], method_name: str) -> Callable[..., Any]:
-    """同步方法包装器：发布 start / success / failure 事件"""
+def _instrument_sync_method(func: Any, method_name: str) -> Any:
+    """同步方法包装器"""
     if method_name == "generate_stream":
         @functools.wraps(func)
         def stream_wrapper(self: Any, prompt: Any = None, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
@@ -137,7 +249,7 @@ def _instrument_sync_method(func: Callable[..., Any], method_name: str) -> Calla
     return wrapper
 
 
-def _instrument_async_method(func: Callable[..., Any], method_name: str) -> Callable[..., Any]:
+def _instrument_async_method(func: Any, method_name: str) -> Any:
     """异步方法包装器"""
     if method_name == "generate_stream":
         @functools.wraps(func)
@@ -189,7 +301,6 @@ def _instrument_subclass(cls: type, async_mode: bool) -> None:
             continue
         if getattr(func, _INSTRUMENTED_FLAG, False):
             continue
-        # 跳过抽象方法（子类实现后才需要包装）
         if getattr(func, "__isabstractmethod__", False):
             continue
         wrapped = (
@@ -202,84 +313,34 @@ def _instrument_subclass(cls: type, async_mode: bool) -> None:
 
 
 class BaseLLMAdapter(ABC):
-    """LLM 适配器基类（同步版本）
-    
-    所有同步适配器的基类，提供了通用的功能和接口
-
-    子类的 ``generate`` / ``generate_json`` / ``generate_stream`` 会被
-    自动插桩，在调用前后向 EventBus 发布事件（供 LoggingHandler /
-    MetricsHandler 使用）。子类无需手动加日志。
-    """
+    """LLM 适配器基类（同步版本）- 向后兼容"""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         _instrument_subclass(cls, async_mode=False)
-    
+
     def __init__(self, inner_client: Any):
-        """初始化适配器
-        
-        Args:
-            inner_client: 被适配的底层客户端实例
-        """
         self._inner_client = inner_client
-    
+
     @property
     @abstractmethod
-    def provider_name(self) -> str:
-        """提供者名称（抽象属性）"""
-        ...
-    
+    def provider_name(self) -> str: ...
+
     @property
     @abstractmethod
-    def default_model(self) -> str:
-        """默认模型名称（抽象属性）"""
-        ...
-    
+    def default_model(self) -> str: ...
+
     @abstractmethod
-    def generate(self, prompt: str, **kwargs) -> str:
-        """生成文本（抽象方法）
-        
-        Args:
-            prompt: 输入提示词
-            **kwargs: 其他参数
-            
-        Returns:
-            生成的文本
-        """
-        ...
-    
+    def generate(self, prompt: str, **kwargs) -> str: ...
+
     @abstractmethod
-    def generate_json(self, prompt: str, schema: Any = None, **kwargs) -> str:
-        """生成 JSON 格式的文本（抽象方法）
-        
-        Args:
-            prompt: 输入提示词
-            schema: JSON Schema（可选）
-            **kwargs: 其他参数
-            
-        Returns:
-            JSON 格式的字符串
-        """
-        ...
-    
+    def generate_json(self, prompt: str, schema: Any = None, **kwargs) -> str: ...
+
     def generate_with_response(self, prompt: str, **kwargs) -> LLMResponse:
-        """生成文本并返回完整响应（模板方法）
-        
-        包含计时逻辑
-        
-        Args:
-            prompt: 输入提示词
-            **kwargs: 其他参数
-            
-        Returns:
-            完整的 LLM 响应对象
-        """
         start_time = time.perf_counter()
-        
         try:
             content = self.generate(prompt, **kwargs)
             latency_ms = (time.perf_counter() - start_time) * 1000
-            
             return LLMResponse(
                 content=content,
                 model=kwargs.get('model', self.default_model),
@@ -294,102 +355,42 @@ class BaseLLMAdapter(ABC):
                 provider=self.provider_name,
                 cause=e
             )
-    
+
     def generate_stream(self, prompt: str, **kwargs) -> Generator[str, None, None]:
-        """流式生成文本（可选实现）
-        
-        默认抛出 NotImplementedError
-        
-        Args:
-            prompt: 输入提示词
-            **kwargs: 其他参数
-            
-        Yields:
-            生成的文本片段
-        """
         raise NotImplementedError(
             f"{self.provider_name} 适配器不支持流式生成"
         )
 
 
 class BaseAsyncLLMAdapter(ABC):
-    """LLM 适配器基类（异步版本）
-    
-    所有异步适配器的基类，提供了通用的功能和接口
-
-    子类的 ``generate`` / ``generate_json`` / ``generate_stream`` 会被
-    自动插桩，在调用前后向 EventBus 发布事件。
-    """
+    """LLM 适配器基类（异步版本）- 向后兼容"""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         _instrument_subclass(cls, async_mode=True)
-    
+
     def __init__(self, inner_client: Any):
-        """初始化适配器
-        
-        Args:
-            inner_client: 被适配的底层客户端实例
-        """
         self._inner_client = inner_client
-    
+
     @property
     @abstractmethod
-    def provider_name(self) -> str:
-        """提供者名称（抽象属性）"""
-        ...
-    
+    def provider_name(self) -> str: ...
+
     @property
     @abstractmethod
-    def default_model(self) -> str:
-        """默认模型名称（抽象属性）"""
-        ...
-    
+    def default_model(self) -> str: ...
+
     @abstractmethod
-    async def generate(self, prompt: str, **kwargs) -> str:
-        """异步生成文本（抽象方法）
-        
-        Args:
-            prompt: 输入提示词
-            **kwargs: 其他参数
-            
-        Returns:
-            生成的文本
-        """
-        ...
-    
+    async def generate(self, prompt: str, **kwargs) -> str: ...
+
     @abstractmethod
-    async def generate_json(self, prompt: str, schema: Any = None, **kwargs) -> str:
-        """异步生成 JSON 格式的文本（抽象方法）
-        
-        Args:
-            prompt: 输入提示词
-            schema: JSON Schema（可选）
-            **kwargs: 其他参数
-            
-        Returns:
-            JSON 格式的字符串
-        """
-        ...
-    
+    async def generate_json(self, prompt: str, schema: Any = None, **kwargs) -> str: ...
+
     async def generate_with_response(self, prompt: str, **kwargs) -> LLMResponse:
-        """异步生成文本并返回完整响应（模板方法）
-        
-        包含计时逻辑
-        
-        Args:
-            prompt: 输入提示词
-            **kwargs: 其他参数
-            
-        Returns:
-            完整的 LLM 响应对象
-        """
         start_time = time.perf_counter()
-        
         try:
             content = await self.generate(prompt, **kwargs)
             latency_ms = (time.perf_counter() - start_time) * 1000
-            
             return LLMResponse(
                 content=content,
                 model=kwargs.get('model', self.default_model),
@@ -404,19 +405,8 @@ class BaseAsyncLLMAdapter(ABC):
                 provider=self.provider_name,
                 cause=e
             )
-    
+
     async def generate_stream(self, prompt: str, **kwargs) -> AsyncGenerator[str, None]:
-        """异步流式生成文本（可选实现）
-        
-        默认抛出 NotImplementedError
-        
-        Args:
-            prompt: 输入提示词
-            **kwargs: 其他参数
-            
-        Yields:
-            生成的文本片段
-        """
         raise NotImplementedError(
             f"{self.provider_name} 适配器不支持流式生成"
         )

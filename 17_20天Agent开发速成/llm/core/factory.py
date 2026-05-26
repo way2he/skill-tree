@@ -1,339 +1,166 @@
+# -*- coding: utf-8 -*-
 """
 LLM 统一接口层 - 工厂与注册表
-提供提供者注册和创建功能，支持多实现层
+
+提供提供者注册和创建功能。
+支持使用 UnifiedAdapter 统一包装底层 Provider。
+
+使用示例:
+    from llm.core.factory import create_llm, register_provider
+
+    # 注册提供者
+    from llm.requests.providers import OpenAIProvider
+    register_provider("openai", OpenAIProvider)
+
+    # 创建实例
+    llm = create_llm("openai", api_key="xxx")
+
+    # 使用
+    result = llm.generate("Hello")
 """
 
-from typing import Dict, Any, Optional, Callable, Type
+from typing import Any, Callable, Type, Optional
 
 from .exceptions import LLMProviderNotFoundError
-from .types import ProviderType
-from .adapter import (
-    BaseLLMAdapter,
-    BaseAsyncLLMAdapter,
-    RequestsLLMAdapter,
-    AioHttpLLMAdapter,
-    OpenAILLMAdapter,
-    AnthropicLLMAdapter,
-    OllamaLLMAdapter,
-    SDKLLMAdapter
-)
+from .adapter import UnifiedAdapter, IProviderClient
+
+# 默认实现方式
+_DEFAULT_IMPLEMENTATION = "requests"
 
 
-class LLMRegistry:
-    """LLM 注册表
+class ProviderRegistry:
+    """
+    提供者注册表
 
-    管理提供者的注册和创建，支持多实现层（requests/aiohttp/openai_sdk/native_sdk）
+    管理提供者的注册和创建。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初始化注册表"""
-        # 同步注册表: {registry_key: entry}
-        # registry_key 格式: {provider} 或 {provider}:{backend}
-        self._sync_registry: Dict[str, Dict[str, Any]] = {}
+        self._providers: dict[str, Type[IProviderClient]] = {}
 
-        # 异步注册表: {registry_key: entry}
-        self._async_registry: Dict[str, Dict[str, Any]] = {}
-
-        # 实现层映射: {provider: {backend: registry_key}}
-        self._backend_mapping: Dict[str, Dict[str, str]] = {}
-    
     def register(
         self,
         name: str,
-        client_factory: Callable[..., Any],
-        adapter_class: Type[BaseLLMAdapter],
-        provider_type: Optional[ProviderType] = None
-    ):
-        """注册同步提供者
-        
-        Args:
-            name: 提供者名称
-            client_factory: 客户端工厂函数
-            adapter_class: 适配器类
-            provider_type: 提供者类型（可选）
-        """
-        self._sync_registry[name] = {
-            'client_factory': client_factory,
-            'adapter_class': adapter_class,
-            'provider_type': provider_type
-        }
-    
-    def register_async(
-        self,
-        name: str,
-        client_factory: Callable[..., Any],
-        adapter_class: Type[BaseAsyncLLMAdapter],
-        provider_type: Optional[ProviderType] = None
-    ):
-        """注册异步提供者
-        
-        Args:
-            name: 提供者名称
-            client_factory: 客户端工厂函数
-            adapter_class: 适配器类
-            provider_type: 提供者类型（可选）
-        """
-        self._async_registry[name] = {
-            'client_factory': client_factory,
-            'adapter_class': adapter_class,
-            'provider_type': provider_type
-        }
-    
-    def provider(self, name: str):
-        """装饰器：注册同步提供者
-        
-        Args:
-            name: 提供者名称
-            
-        Returns:
-            装饰器
-        """
-        def decorator(factory):
-            # 默认使用 RequestsLLMAdapter
-            self.register(
-                name, 
-                factory, 
-                RequestsLLMAdapter,
-                ProviderType.REQUESTS
-            )
-            return factory
-        return decorator
-    
-    def create(self, name: str, **kwargs) -> BaseLLMAdapter:
-        """创建同步适配器
-        
-        Args:
-            name: 提供者名称
-            **kwargs: 客户端构造参数
-            
-        Returns:
-            适配器实例
-        """
-        if name not in self._sync_registry:
-            raise LLMProviderNotFoundError(
-                f"提供者未注册: {name}，支持的选项: {list(self._sync_registry.keys())}",
-                provider=name
-            )
-        
-        entry = self._sync_registry[name]
-        client_factory = entry['client_factory']
-        adapter_class = entry['adapter_class']
-        
-        # 创建客户端
-        client = client_factory(**kwargs)
-        
-        # 创建并返回适配器
-        return adapter_class(client, provider_name=name)
-    
-    def create_async(self, name: str, **kwargs) -> BaseAsyncLLMAdapter:
-        """创建异步适配器
-        
-        Args:
-            name: 提供者名称
-            **kwargs: 客户端构造参数
-            
-        Returns:
-            异步适配器实例
-        """
-        if name not in self._async_registry:
-            raise LLMProviderNotFoundError(
-                f"异步提供者未注册: {name}，支持的选项: {list(self._async_registry.keys())}",
-                provider=name
-            )
-        
-        entry = self._async_registry[name]
-        client_factory = entry['client_factory']
-        adapter_class = entry['adapter_class']
-        
-        # 创建客户端
-        client = client_factory(**kwargs)
-        
-        # 创建并返回适配器
-        return adapter_class(client, provider_name=name)
-    
-    def _infer_adapter(self, client: Any) -> Type[BaseLLMAdapter]:
-        """根据客户端类型自动推断适配器
-        
-        Args:
-            client: 客户端实例
-            
-        Returns:
-            适配器类
-        """
-        # 这是一个简化的实现
-        # 实际项目中可以根据客户端的类型、模块等进行更智能的推断
-        client_class_name = client.__class__.__name__.lower()
-        
-        if 'aiohttp' in client_class_name:
-            return AioHttpLLMAdapter
-        elif 'openai' in client_class_name:
-            return OpenAILLMAdapter
-        elif 'anthropic' in client_class_name:
-            return AnthropicLLMAdapter
-        elif 'ollama' in client_class_name:
-            return OllamaLLMAdapter
-        elif any(sdk in client_class_name for sdk in [
-            'baidu', 'alibaba', 'zhipu', 'google', 
-            'cohere', 'mistral', 'groq', 'volcengine'
-        ]):
-            return SDKLLMAdapter
-        else:
-            return RequestsLLMAdapter
-    
-    def list_providers(self) -> list[str]:
-        """列出所有已注册的同步提供者
-        
-        Returns:
-            提供者名称列表
-        """
-        return list(self._sync_registry.keys())
-    
-    def list_async_providers(self) -> list[str]:
-        """列出所有已注册的异步提供者
-
-        Returns:
-            提供者名称列表
-        """
-        return list(self._async_registry.keys())
-
-    # ========== 新增：多实现层支持 ==========
-
-    def register_with_backend(
-        self,
-        provider: str,
-        backend: str,
-        client_factory: Callable[..., Any],
-        adapter_class: Type[BaseLLMAdapter],
-        is_async: bool = False,
-        provider_type: Optional[ProviderType] = None
+        provider_class: Type[IProviderClient]
     ) -> None:
         """
-        注册指定实现层的提供者
+        注册提供者
 
         Args:
-            provider: 厂商名称
-            backend: 实现类型（requests/aiohttp/openai_sdk/native_sdk）
-            client_factory: 客户端工厂函数
-            adapter_class: 适配器类
-            is_async: 是否为异步实现
-            provider_type: 提供者类型（可选）
+            name: 提供者名称
+            provider_class: Provider 类（实现 IProviderClient）
         """
-        # 生成注册表键
-        # requests 是默认实现，使用原始键名 {provider}
-        # 其他实现使用 {provider}:{backend}
-        registry_key = provider if backend == "requests" else f"{provider}:{backend}"
+        self._providers[name] = provider_class
 
-        # 注册到对应注册表
-        entry = {
-            "client_factory": client_factory,
-            "adapter_class": adapter_class,
-            "provider_type": provider_type,
-            "backend": backend
-        }
-
-        if is_async:
-            self._async_registry[registry_key] = entry
-        else:
-            self._sync_registry[registry_key] = entry
-
-        # 更新实现层映射
-        if provider not in self._backend_mapping:
-            self._backend_mapping[provider] = {}
-        self._backend_mapping[provider][backend] = registry_key
-
-    def list_backends(self, provider: str) -> list[str]:
+    def create(self, name: str, **kwargs: Any) -> UnifiedAdapter:
         """
-        列出厂商支持的所有实现层
+        创建 UnifiedAdapter 实例
 
         Args:
-            provider: 厂商名称
+            name: 提供者名称
+            **kwargs: Provider 构造参数
 
         Returns:
-            支持的实现类型列表
+            UnifiedAdapter 实例
         """
-        return list(self._backend_mapping.get(provider, {}).keys())
+        if name not in self._providers:
+            supported = list(self._providers.keys())
+            raise LLMProviderNotFoundError(
+                f"未知提供者: {name}，支持的选项: {supported}",
+                provider=name
+            )
 
-    def get_supported_backends(self) -> Dict[str, list[str]]:
-        """
-        获取所有厂商支持的实现层
+        # 创建底层 Provider
+        provider_class = self._providers[name]
+        provider = provider_class(**kwargs)
 
-        Returns:
-            {厂商: [支持的实现类型]} 映射
-        """
-        return {
-            provider: list(backends.keys())
-            for provider, backends in self._backend_mapping.items()
-        }
+        # 包装为 UnifiedAdapter
+        return UnifiedAdapter(provider)
+
+    def list_providers(self) -> list[str]:
+        """列出所有已注册的提供者"""
+        return list(self._providers.keys())
+
+    def get_provider_class(self, name: str) -> Type[IProviderClient]:
+        """获取提供者类"""
+        if name not in self._providers:
+            raise LLMProviderNotFoundError(
+                f"未知提供者: {name}",
+                provider=name
+            )
+        return self._providers[name]
 
 
-# 全局注册表实例
-_registry = LLMRegistry()
+# =============================================================================
+# 全局注册表
+# =============================================================================
+
+_registry = ProviderRegistry()
 
 
+# =============================================================================
 # 便捷函数
+# =============================================================================
+
 def register_provider(
     name: str,
-    client_factory: Callable[..., Any],
-    adapter_class: Type[BaseLLMAdapter] = RequestsLLMAdapter,
-    provider_type: Optional[ProviderType] = None
-):
-    """注册同步提供者（便捷函数）
-    
-    Args:
-        name: 提供者名称
-        client_factory: 客户端工厂函数
-        adapter_class: 适配器类（默认 RequestsLLMAdapter）
-        provider_type: 提供者类型（可选）
+    provider_class: Type[IProviderClient]
+) -> None:
     """
-    _registry.register(name, client_factory, adapter_class, provider_type)
+    注册提供者（便捷函数）
 
-
-def register_async_provider(
-    name: str,
-    client_factory: Callable[..., Any],
-    adapter_class: Type[BaseAsyncLLMAdapter] = AioHttpLLMAdapter,
-    provider_type: Optional[ProviderType] = None
-):
-    """注册异步提供者（便捷函数）
-    
     Args:
         name: 提供者名称
-        client_factory: 客户端工厂函数
-        adapter_class: 适配器类（默认 AioHttpLLMAdapter）
-        provider_type: 提供者类型（可选）
+        provider_class: Provider 类
     """
-    _registry.register_async(name, client_factory, adapter_class, provider_type)
+    _registry.register(name, provider_class)
 
 
-def create_llm(name: str, **kwargs) -> BaseLLMAdapter:
-    """创建同步 LLM 实例（便捷函数）
-    
+def create_llm(name: str, implementation: Optional[str] = None, **kwargs: Any) -> UnifiedAdapter:
+    """
+    创建 LLM 实例（便捷函数）
+
     Args:
         name: 提供者名称
-        **kwargs: 客户端构造参数
-        
+        implementation: 实现方式（"requests" | "aiohttp" | "openai_sdk" | ...）
+        **kwargs: Provider 构造参数
+
     Returns:
-        适配器实例
+        UnifiedAdapter 实例
+
+    Example:
+        from llm.core.factory import create_llm
+
+        # 使用默认实现（requests）
+        openai = create_llm("openai", api_key="sk-xxx")
+
+        # 切换到 aiohttp 实现
+        openai = create_llm("openai", implementation="aiohttp", api_key="sk-xxx")
+
+        # 切换到 OpenAI SDK 实现
+        openai = create_llm("openai", implementation="openai_sdk", api_key="sk-xxx")
+
+        # 使用
+        result = openai.generate("Hello")
+        async_result = await openai.agenerate("Hello")
     """
+    impl = implementation or _DEFAULT_IMPLEMENTATION
+    
+    # 先尝试按实现方式动态导入
+    if impl != "requests":
+        try:
+            _try_register_implementation(impl)
+        except ImportError:
+            pass
+    
     return _registry.create(name, **kwargs)
 
 
-def create_async_llm(name: str, **kwargs) -> BaseAsyncLLMAdapter:
-    """创建异步 LLM 实例（便捷函数）
-    
-    Args:
-        name: 提供者名称
-        **kwargs: 客户端构造参数
-        
-    Returns:
-        异步适配器实例
-    """
-    return _registry.create_async(name, **kwargs)
-
-
 def list_providers() -> list[str]:
-    """列出所有已注册的同步提供者
-    
+    """
+    列出所有已注册的提供者
+
     Returns:
         提供者名称列表
     """
@@ -341,107 +168,156 @@ def list_providers() -> list[str]:
 
 
 def list_async_providers() -> list[str]:
-    """列出所有已注册的异步提供者
-    
+    """
+    列出所有已注册的异步提供者
+
+    注意：UnifiedAdapter 同时支持同步和异步调用，
+    所以所有提供者都支持异步。
+
     Returns:
         提供者名称列表
     """
-    return _registry.list_async_providers()
+    return _registry.list_providers()
 
 
-# 内置注册 - 注册所有现有的 llm/requests/ 厂商
-def _register_builtin_providers():
-    """注册内置提供者"""
-    # 导入现有的厂商客户端
+def create_async_llm(name: str, **kwargs: Any) -> UnifiedAdapter:
+    """
+    创建异步 LLM 实例（便捷函数）
+
+    注意：返回的 UnifiedAdapter 同时支持同步和异步调用。
+    异步调用请使用 await adapter.agenerate()。
+
+    Args:
+        name: 提供者名称
+        **kwargs: Provider 构造参数
+
+    Returns:
+        UnifiedAdapter 实例
+    """
+    return _registry.create(name, **kwargs)
+
+
+# =============================================================================
+# 实现方式切换支持
+# =============================================================================
+
+def _try_register_implementation(implementation: str) -> None:
+    """尝试注册指定实现方式的 providers"""
     try:
-        from llm.requests.providers import (
-            OllamaClient,
-            OpenAIClient,
-            AnthropicClient,
-            DoubaoClient,
-            QwenClient,
-            GLMClient,
-            WenxinClient,
-            KimiClient,
-            DeepSeekClient,
-            MiniMaxClient,
-            CohereClient,
-            HunyuanClient,
-            PanguClient,
-            MistralClient,
-            TogetherClient,
-            MiLMClient,
-            XAIClient,
-            GoogleClient,
-            MetaClient,
-            ShangtangClient,
-            StepfunClient,
-            TiangongClient,
-            SparkClient,
-            BaichuanClient,
-            YiClient,
-        )
-        
-        # 注册所有厂商 - 使用 RequestsLLMAdapter
-        providers = [
-            ("ollama", OllamaClient, OllamaLLMAdapter, ProviderType.OLLAMA),
-            ("openai", OpenAIClient, OpenAILLMAdapter, ProviderType.OPENAI),
-            ("anthropic", AnthropicClient, AnthropicLLMAdapter, ProviderType.ANTHROPIC),
-            ("doubao", DoubaoClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("qwen", QwenClient, SDKLLMAdapter, ProviderType.ALIBABA),
-            ("glm", GLMClient, SDKLLMAdapter, ProviderType.ZHIPU),
-            ("wenxin", WenxinClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("kimi", KimiClient, SDKLLMAdapter, ProviderType.ZHIPU),
-            ("deepseek", DeepSeekClient, RequestsLLMAdapter, ProviderType.REQUESTS),
-            ("minimax", MiniMaxClient, SDKLLMAdapter, ProviderType.ZHIPU),
-            ("cohere", CohereClient, SDKLLMAdapter, ProviderType.COHERE),
-            ("hunyuan", HunyuanClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("pangu", PanguClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("mistral", MistralClient, SDKLLMAdapter, ProviderType.MISTRAL),
-            ("together", TogetherClient, RequestsLLMAdapter, ProviderType.REQUESTS),
-            ("milm", MiLMClient, SDKLLMAdapter, ProviderType.ZHIPU),
-            ("xai", XAIClient, RequestsLLMAdapter, ProviderType.REQUESTS),
-            ("google", GoogleClient, SDKLLMAdapter, ProviderType.GOOGLE),
-            ("meta", MetaClient, SDKLLMAdapter, ProviderType.GOOGLE),
-            ("shangtang", ShangtangClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("stepfun", StepfunClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("tiangong", TiangongClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("spark", SparkClient, SDKLLMAdapter, ProviderType.BAIDU),
-            ("baichuan", BaichuanClient, SDKLLMAdapter, ProviderType.ZHIPU),
-            ("yi", YiClient, SDKLLMAdapter, ProviderType.ZHIPU),
-        ]
-        
-        for name, client_class, adapter_class, provider_type in providers:
-            register_provider(name, client_class, adapter_class, provider_type)
-        
-        # 尝试注册异步厂商
-        try:
-            from llm.aiohttp.providers import create_client as create_async_client
-            
-            # 这里简化处理，实际项目中可以根据需要注册更多异步厂商
-            async_providers = [
-                "ollama", "openai", "anthropic", "deepseek", "qwen",
-                "glm", "wenxin", "kimi", "doubao", "minimax",
-                "cohere", "hunyuan", "pangu", "mistral", "together",
-                "milm", "xai", "google", "meta", "shangtang",
-                "stepfun", "tiangong", "spark", "baichuan", "yi",
+        if implementation == "requests":
+            from llm.implementations.requests.providers import (
+                OpenAIProvider,
+                AnthropicProvider,
+                DeepSeekProvider,
+                QwenProvider,
+                GLMProvider,
+                KimiProvider,
+                DoubaoProvider,
+                WenxinProvider,
+                HunyuanProvider,
+                MiniMaxProvider,
+                CohereProvider,
+                OllamaProvider,
+                MistralProvider,
+                TogetherProvider,
+                MiLMProvider,
+                XAIProvider,
+                GoogleProvider,
+                MetaProvider,
+                ShangtangProvider,
+                StepfunProvider,
+                TiangongProvider,
+                SparkProvider,
+                BaichuanProvider,
+                YiProvider,
+                PanguProvider,
+            )
+            providers = [
+                ("openai", OpenAIProvider),
+                ("anthropic", AnthropicProvider),
+                ("deepseek", DeepSeekProvider),
+                ("qwen", QwenProvider),
+                ("glm", GLMProvider),
+                ("kimi", KimiProvider),
+                ("doubao", DoubaoProvider),
+                ("wenxin", WenxinProvider),
+                ("hunyuan", HunyuanProvider),
+                ("minimax", MiniMaxProvider),
+                ("cohere", CohereProvider),
+                ("ollama", OllamaProvider),
+                ("mistral", MistralProvider),
+                ("together", TogetherProvider),
+                ("milm", MiLMProvider),
+                ("xai", XAIProvider),
+                ("google", GoogleProvider),
+                ("meta", MetaProvider),
+                ("shangtang", ShangtangProvider),
+                ("stepfun", StepfunProvider),
+                ("tiangong", TiangongProvider),
+                ("spark", SparkProvider),
+                ("baichuan", BaichuanProvider),
+                ("yi", YiProvider),
+                ("pangu", PanguProvider),
             ]
-            
-            for name in async_providers:
-                def factory(n=name):
-                    def create(**kwargs):
-                        from llm.aiohttp.providers import create_client
-                        return create_client(n, **kwargs)
-                    return create
-                
-                register_async_provider(name, factory(), AioHttpLLMAdapter, ProviderType.AIOHTTP)
-        except (ImportError, Exception):
-            # 异步模块可能不存在，忽略
-            pass
+            for name, provider_class in providers:
+                register_provider(name, provider_class)
         
+        elif implementation == "aiohttp":
+            from llm.implementations.aiohttp.providers import (
+                OpenAIProvider,
+                AnthropicProvider,
+                QwenProvider,
+                GLMProvider,
+                DoubaoProvider,
+                WenxinProvider,
+            )
+            providers = [
+                ("openai", OpenAIProvider),
+                ("anthropic", AnthropicProvider),
+                ("qwen", QwenProvider),
+                ("glm", GLMProvider),
+                ("doubao", DoubaoProvider),
+                ("wenxin", WenxinProvider),
+            ]
+            for name, provider_class in providers:
+                register_provider(name, provider_class)
+        
+        elif implementation == "openai_sdk":
+            from llm.implementations.openai_sdk.providers.openai import OpenAIProvider
+            register_provider("openai", OpenAIProvider)
+        
+        elif implementation == "anthropic_sdk":
+            from llm.implementations.anthropic_sdk.providers.anthropic import AnthropicProvider
+            register_provider("anthropic", AnthropicProvider)
+        
+        elif implementation == "qwen_sdk":
+            from llm.implementations.qwen_sdk.providers.qwen import QwenProvider
+            register_provider("qwen", QwenProvider)
+        
+        elif implementation == "glm_sdk":
+            from llm.implementations.glm_sdk.providers.glm import GLMProvider
+            register_provider("glm", GLMProvider)
+        
+        elif implementation == "wenxin_sdk":
+            from llm.implementations.wenxin_sdk.providers.wenxin import WenxinProvider
+            register_provider("wenxin", WenxinProvider)
+        
+        elif implementation == "doubao_sdk":
+            from llm.implementations.doubao_sdk.providers.doubao import DoubaoProvider
+            register_provider("doubao", DoubaoProvider)
+    
     except ImportError:
-        # 如果 llm.requests 模块不存在，只做简单的占位注册
         pass
 
 
+# =============================================================================
+# 内置注册
+# =============================================================================
+
+def _register_builtin_providers() -> None:
+    """注册内置提供者（默认使用 requests 实现）"""
+    _try_register_implementation(_DEFAULT_IMPLEMENTATION)
+
+
+# 注册内置提供者
 _register_builtin_providers()
