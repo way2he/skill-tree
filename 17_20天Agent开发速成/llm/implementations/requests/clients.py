@@ -11,14 +11,14 @@
     - 其他: 商汤科技, 阶跃星辰, 昆仑万维(天工)
 
 使用示例:
-    from llm.requests import create_llm_client, llm_generate
+    from llm.implementations.requests import create_llm_client, llm_generate
 
     # 方式1: 使用工厂函数
     client = create_llm_client("deepseek", api_key="sk-xxx")
     response = client.generate("你好")
 
     # 方式2: 直接导入
-    from llm.requests.providers import DeepSeekClient
+    from llm.implementations.requests.providers import DeepSeekClient
     client = DeepSeekClient(api_key="sk-xxx")
     response = client.generate("你好")
 """

@@ -19,7 +19,7 @@ if sys.platform.startswith("win"):
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from llm.requests.providers.ollama import OllamaClient
+from llm.implementations.requests.providers.ollama import OllamaClient
 
 
 def test_generate() -> None:

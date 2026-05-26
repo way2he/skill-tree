@@ -205,7 +205,7 @@ def test_9_provider():
     print("TEST 9/9: 直接 Provider 调用 (demo_ollama_requests.py)")
     print("=" * 60)
 
-    from llm.requests.providers.ollama import OllamaClient
+    from llm.implementations.requests.providers.ollama import OllamaClient
 
     client = OllamaClient(model=TEST_MODEL)
     response = client.generate("直接 Provider 调用测试")

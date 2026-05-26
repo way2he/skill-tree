@@ -5,7 +5,7 @@ LLM Providers - 各厂商 Provider 实现
 导出所有厂商的 Provider 类。
 
 使用示例:
-    from llm.requests.providers import OpenAIProvider, AnthropicProvider
+    from llm.implementations.requests.providers import OpenAIProvider, AnthropicProvider
 
     # 直接使用
     openai = OpenAIProvider(api_key="xxx")

@@ -9,7 +9,7 @@ LLM 统一接口层 - 工厂与注册表
     from llm.core.factory import create_llm, register_provider
 
     # 注册提供者
-    from llm.requests.providers import OpenAIProvider
+    from llm.implementations.requests.providers import OpenAIProvider
     register_provider("openai", OpenAIProvider)
 
     # 创建实例

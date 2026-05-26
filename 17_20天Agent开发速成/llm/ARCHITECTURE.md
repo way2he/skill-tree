@@ -127,19 +127,6 @@ result = llm.generate("Hello")
 
 ---
 
-## ⚠️ 向后兼容
-
-旧的导入路径仍然支持：
-```python
-# 旧路径（仍然可用）
-from llm.requests.providers import OpenAIProvider
-
-# 新路径（推荐）
-from llm.implementations.requests.providers import OpenAIProvider
-```
-
----
-
 ## 🎉 总结
 
 - ✅ **清晰结构**：所有实现方式集中在 `implementations/` 目录

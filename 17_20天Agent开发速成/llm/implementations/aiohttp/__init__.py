@@ -5,7 +5,7 @@
 
 使用示例:
     import asyncio
-    from llm.aiohttp import create_async_llm_client, async_llm_generate
+    from llm.implementations.aiohttp import create_async_llm_client, async_llm_generate
 
     async def main():
         # 方式1: 使用工厂函数创建客户端

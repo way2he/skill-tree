@@ -355,7 +355,7 @@ def test_provider_direct() -> bool:
     print("=" * 60)
 
     try:
-        from llm.requests.providers.ollama import OllamaClient
+        from llm.implementations.requests.providers.ollama import OllamaClient
 
         client = OllamaClient(model=TEST_MODEL)
         response = client.generate("直接 Provider 调用")
