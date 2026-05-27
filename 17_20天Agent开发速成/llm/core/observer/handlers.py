@@ -129,6 +129,15 @@ class LoggingHandler:
         """处理事件"""
         parts: list[str] = [f"[{event.event_type.value}]"]
 
+        # 添加 trace_id（如果存在）
+        try:
+            from ..trace import get_trace_id
+            tid = get_trace_id()
+            if tid:
+                parts.append(f"trace={tid[:8]}")
+        except ImportError:
+            pass
+
         if event.request_id:
             parts.append(f"rid={event.request_id}")
         if event.provider:

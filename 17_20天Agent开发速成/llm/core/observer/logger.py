@@ -44,7 +44,7 @@ __all__ = [
 ]
 
 
-DEFAULT_LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s | %(message)s"
+DEFAULT_LOG_FORMAT = "%(asctime)s [%(trace_id)s] %(levelname)s [%(name)s] %(message)s"
 DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
@@ -106,11 +106,14 @@ def _ensure_logger(
     _handlers_added.clear()
 
     fmt = logging.Formatter(DEFAULT_LOG_FORMAT, datefmt=DEFAULT_DATE_FORMAT)
+    from ..trace import TraceFilter
+    trace_filter = TraceFilter()
 
     if console:
         ch = logging.StreamHandler()
         ch.setLevel(level)
         ch.setFormatter(fmt)
+        ch.addFilter(trace_filter)
         lg.addHandler(ch)
         _handlers_added.append(ch)
 
@@ -125,6 +128,7 @@ def _ensure_logger(
         )
         fh.setLevel(level)
         fh.setFormatter(fmt)
+        fh.addFilter(trace_filter)
         lg.addHandler(fh)
         _handlers_added.append(fh)
 
@@ -223,6 +227,11 @@ def enable_logging(
             subscribe(None, metrics)
             _installed_metrics = metrics
 
+        target_logger.info("LLM logging system enabled: level=%s console=%s log_file=%s metrics=%s",
+                          logging.getLevelName(int_level), console,
+                          str(log_file) if log_file else "None",
+                          enable_metrics)
+
         return target_logger
 
 
@@ -245,6 +254,7 @@ def _disable_locked() -> None:
         except Exception:
             pass
     _handlers_added.clear()
+    lg.info("LLM logging system disabled")
 
 
 def disable_logging() -> None:

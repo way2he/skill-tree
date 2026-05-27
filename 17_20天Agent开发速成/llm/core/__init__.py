@@ -174,6 +174,10 @@ from .observer import (
     publish,
 )
 
+# 导出日志工具
+from .logging_utils import get_logger
+from .trace import new_trace_id, get_trace_id, set_trace_id, trace_context, TraceFilter
+
 # 导出模型注册表（符合 MEMORY.md 规则）
 from .model_registry import (
     ModelRegistry,
@@ -277,6 +281,13 @@ __all__ = [
     "subscribe",
     "unsubscribe",
     "publish",
+    # 日志工具
+    "get_logger",
+    "new_trace_id",
+    "get_trace_id",
+    "set_trace_id",
+    "trace_context",
+    "TraceFilter",
     # 模型注册表
     "ModelRegistry",
     "ModelInfo",

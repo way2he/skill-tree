@@ -15,6 +15,10 @@ from ..exceptions import (
     LLMServerError,
     LLMTimeoutError
 )
+from ..logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("retry")
 
 
 @dataclass
@@ -88,25 +92,45 @@ def with_retry(
                         isinstance(e, policy.retryable_exceptions) and
                         not isinstance(e, policy.non_retryable_exceptions)
                     )
-                    
+
+                    # 记录不可重试异常
+                    if not is_retryable:
+                        _logger.debug(
+                            "不可重试异常，直接抛出: attempt=%d exception=%s: %s",
+                            attempt, type(e).__name__, e,
+                        )
+
                     if not is_retryable or attempt >= policy.max_retries:
+                        # 记录最终重试失败
+                        if attempt >= policy.max_retries:
+                            _logger.error(
+                                "重试耗尽: max_retries=%d last_exception=%s: %s",
+                                policy.max_retries, type(e).__name__, e,
+                            )
                         raise
-                    
+
                     # 计算延迟
                     delay = calculate_delay(attempt, policy)
-                    
+
+                    # 记录重试发生
+                    _logger.warning(
+                        "开始重试: attempt=%d/%s delay=%.2fs exception=%s: %s",
+                        attempt + 1, policy.max_retries, delay,
+                        type(e).__name__, e,
+                    )
+
                     # 调用回调
                     if on_retry:
                         on_retry(attempt, e)
-                    
+
                     # 等待
                     time.sleep(delay)
-            
+
             # 如果到这里，说明所有重试都失败了
             if last_exception:
                 raise last_exception
             raise LLMError("重试失败")
-        
+
         return wrapper
     return decorator
 
@@ -141,19 +165,39 @@ def with_async_retry(
                         isinstance(e, policy.retryable_exceptions) and
                         not isinstance(e, policy.non_retryable_exceptions)
                     )
-                    
+
+                    # 记录不可重试异常
+                    if not is_retryable:
+                        _logger.debug(
+                            "不可重试异常，直接抛出: attempt=%d exception=%s: %s",
+                            attempt, type(e).__name__, e,
+                        )
+
                     if not is_retryable or attempt >= policy.max_retries:
+                        # 记录最终重试失败
+                        if attempt >= policy.max_retries:
+                            _logger.error(
+                                "重试耗尽: max_retries=%d last_exception=%s: %s",
+                                policy.max_retries, type(e).__name__, e,
+                            )
                         raise
-                    
+
                     # 计算延迟
                     delay = calculate_delay(attempt, policy)
-                    
+
+                    # 记录重试发生
+                    _logger.warning(
+                        "开始重试: attempt=%d/%s delay=%.2fs exception=%s: %s",
+                        attempt + 1, policy.max_retries, delay,
+                        type(e).__name__, e,
+                    )
+
                     # 调用回调
                     if on_retry:
                         result = on_retry(attempt, e)
                         if hasattr(result, '__await__'):
                             await result
-                    
+
                     # 等待
                     await asyncio.sleep(delay)
             

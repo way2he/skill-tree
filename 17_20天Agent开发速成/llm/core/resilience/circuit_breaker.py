@@ -10,6 +10,10 @@ from typing import Optional, Callable
 
 from ..types import CircuitState
 from ..exceptions import LLMCircuitOpenError
+from ..logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("circuit_breaker")
 
 
 @dataclass
@@ -64,6 +68,11 @@ class CircuitBreaker:
                     old_state = self._state
                     self._state = CircuitState.HALF_OPEN
                     self._success_count = 0
+                    _logger.warning(
+                        "熔断器状态变更: name=%s %s -> %s (recovery_timeout=%.1fs reached)",
+                        self._name, old_state.value, self._state.value,
+                        self._config.recovery_timeout,
+                    )
                     if self._on_state_change:
                         self._on_state_change(old_state, self._state)
             return self._state
@@ -85,6 +94,10 @@ class CircuitBreaker:
                     return True
                 return False
         else:  # OPEN
+            _logger.warning(
+                "请求被熔断拒绝: name=%s state=OPEN",
+                self._name,
+            )
             return False
     
     def record_success(self):
@@ -99,6 +112,11 @@ class CircuitBreaker:
                     self._failure_count = 0
                     self._success_count = 0
                     self._opened_at = None
+                    _logger.info(
+                        "熔断器状态变更: name=%s %s -> %s (探测成功, success_count=%d/%d)",
+                        self._name, old_state.value, self._state.value,
+                        self._success_count, self._config.success_threshold,
+                    )
                     if self._on_state_change:
                         self._on_state_change(old_state, self._state)
             elif self._state == CircuitState.CLOSED:
@@ -115,6 +133,11 @@ class CircuitBreaker:
                     old_state = self._state
                     self._state = CircuitState.OPEN
                     self._opened_at = time.time()
+                    _logger.warning(
+                        "熔断器状态变更: name=%s %s -> %s (failure_count=%d >= threshold=%d)",
+                        self._name, old_state.value, self._state.value,
+                        self._failure_count, self._config.failure_threshold,
+                    )
                     if self._on_state_change:
                         self._on_state_change(old_state, self._state)
             elif self._state == CircuitState.HALF_OPEN:
@@ -122,6 +145,10 @@ class CircuitBreaker:
                 old_state = self._state
                 self._state = CircuitState.OPEN
                 self._opened_at = time.time()
+                _logger.warning(
+                    "熔断器状态变更: name=%s %s -> %s (半开探测失败)",
+                    self._name, old_state.value, self._state.value,
+                )
                 if self._on_state_change:
                     self._on_state_change(old_state, self._state)
     

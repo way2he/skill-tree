@@ -41,6 +41,10 @@ from .backend import (
     _get_backend_from_yaml_default,
     _BackendGlobal
 )
+from .logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("default")
 
 
 PROVIDER_ENV = "LLM_PROVIDER"
@@ -56,7 +60,8 @@ def _read_default_from_yaml() -> Optional[str]:
     try:
         from .config import load_config
         return load_config(str(CONFIG_PATH)).default_provider
-    except Exception:
+    except Exception as e:
+        _logger.warning("YAML 配置读取失败: path=%s error=%s: %s", CONFIG_PATH, type(e).__name__, e)
         return None
 
 
@@ -79,16 +84,20 @@ def resolve_provider(provider=None) -> str:
     """
     name = _normalize(provider)
     if name:
+        _logger.debug("Provider 解析: source=入参 value=%s", name)
         return name
 
     env_val = os.getenv(PROVIDER_ENV, "").strip().lower()
     if env_val:
+        _logger.debug("Provider 解析: source=环境变量 value=%s", env_val)
         return env_val
 
     yaml_val = _read_default_from_yaml()
     if yaml_val:
+        _logger.debug("Provider 解析: source=YAML value=%s", yaml_val.strip().lower())
         return yaml_val.strip().lower()
 
+    _logger.debug("Provider 解析: source=兜底 value=%s", FALLBACK_PROVIDER)
     return FALLBACK_PROVIDER
 
 

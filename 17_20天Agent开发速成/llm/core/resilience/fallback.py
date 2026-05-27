@@ -7,6 +7,11 @@ from typing import List, Any, Dict, Optional, Callable
 
 from ..exceptions import LLMError
 
+from ..logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("fallback")
+
 
 class FallbackStrategy:
     """降级策略（同步版本）
@@ -74,6 +79,10 @@ class FallbackStrategy:
             return client.generate(prompt, **kwargs)
         except Exception as e:
             last_exception = e
+            _logger.warning(
+                "降级触发: 主提供者失败 exception=%s: %s",
+                type(e).__name__, e,
+            )
             if self._on_fallback:
                 self._on_fallback(0, e)
         
@@ -82,7 +91,12 @@ class FallbackStrategy:
             fallback_index = i + 1
             try:
                 client = self._get_client(fallback_index)
-                return client.generate(prompt, **kwargs)
+                result = client.generate(prompt, **kwargs)
+                _logger.info(
+                    "降级成功: fallback_index=%d provider=%s",
+                    fallback_index, getattr(client, 'provider_name', 'unknown'),
+                )
+                return result
             except Exception as e:
                 last_exception = e
                 if self._on_fallback:
@@ -112,6 +126,10 @@ class FallbackStrategy:
             return client.generate_json(prompt, schema, **kwargs)
         except Exception as e:
             last_exception = e
+            _logger.warning(
+                "降级触发: 主提供者失败 exception=%s: %s",
+                type(e).__name__, e,
+            )
             if self._on_fallback:
                 self._on_fallback(0, e)
         
@@ -120,7 +138,12 @@ class FallbackStrategy:
             fallback_index = i + 1
             try:
                 client = self._get_client(fallback_index)
-                return client.generate_json(prompt, schema, **kwargs)
+                result = client.generate_json(prompt, schema, **kwargs)
+                _logger.info(
+                    "降级成功: fallback_index=%d provider=%s",
+                    fallback_index, getattr(client, 'provider_name', 'unknown'),
+                )
+                return result
             except Exception as e:
                 last_exception = e
                 if self._on_fallback:
@@ -198,6 +221,10 @@ class AsyncFallbackStrategy:
             return await client.generate(prompt, **kwargs)
         except Exception as e:
             last_exception = e
+            _logger.warning(
+                "降级触发: 主提供者失败 exception=%s: %s",
+                type(e).__name__, e,
+            )
             if self._on_fallback:
                 result = self._on_fallback(0, e)
                 if hasattr(result, '__await__'):
@@ -208,7 +235,12 @@ class AsyncFallbackStrategy:
             fallback_index = i + 1
             try:
                 client = await self._get_client(fallback_index)
-                return await client.generate(prompt, **kwargs)
+                result = await client.generate(prompt, **kwargs)
+                _logger.info(
+                    "降级成功: fallback_index=%d provider=%s",
+                    fallback_index, getattr(client, 'provider_name', 'unknown'),
+                )
+                return result
             except Exception as e:
                 last_exception = e
                 if self._on_fallback:
@@ -240,6 +272,10 @@ class AsyncFallbackStrategy:
             return await client.generate_json(prompt, schema, **kwargs)
         except Exception as e:
             last_exception = e
+            _logger.warning(
+                "降级触发: 主提供者失败 exception=%s: %s",
+                type(e).__name__, e,
+            )
             if self._on_fallback:
                 result = self._on_fallback(0, e)
                 if hasattr(result, '__await__'):
@@ -250,7 +286,12 @@ class AsyncFallbackStrategy:
             fallback_index = i + 1
             try:
                 client = await self._get_client(fallback_index)
-                return await client.generate_json(prompt, schema, **kwargs)
+                result = await client.generate_json(prompt, schema, **kwargs)
+                _logger.info(
+                    "降级成功: fallback_index=%d provider=%s",
+                    fallback_index, getattr(client, 'provider_name', 'unknown'),
+                )
+                return result
             except Exception as e:
                 last_exception = e
                 if self._on_fallback:

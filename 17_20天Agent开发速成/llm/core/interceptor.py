@@ -25,6 +25,10 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Optional
 
 from .types import InterceptorPoint, InvocationContext
+from .logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("interceptor")
 
 
 # =============================================================================
@@ -80,24 +84,31 @@ class LoggingInterceptor(Interceptor):
         """日志拦截"""
         try:
             if point == InterceptorPoint.BEFORE_REQUEST:
-                print(
-                    f"[{context.request_id[:8]}] "
-                    f"{context.provider}/{context.model} "
-                    f"- 请求开始: {context.prompt[:50]}..."
+                _logger.info(
+                    "[%s] %s/%s - 请求开始: %s",
+                    context.request_id[:8],
+                    context.provider,
+                    context.model,
+                    context.prompt[:50],
                 )
             elif point == InterceptorPoint.AFTER_SUCCESS:
                 latency = (time.perf_counter() - context.start_time) * 1000
-                print(
-                    f"[{context.request_id[:8]}] "
-                    f"{context.provider}/{context.model} "
-                    f"- 成功 ({latency:.0f}ms)"
+                _logger.info(
+                    "[%s] %s/%s - 成功 (%.0fms)",
+                    context.request_id[:8],
+                    context.provider,
+                    context.model,
+                    latency,
                 )
             elif point == InterceptorPoint.AFTER_FAILURE:
                 latency = (time.perf_counter() - context.start_time) * 1000
-                print(
-                    f"[{context.request_id[:8]}] "
-                    f"{context.provider}/{context.model} "
-                    f"- 失败: {error} ({latency:.0f}ms)"
+                _logger.error(
+                    "[%s] %s/%s - 失败: %s (%.0fms)",
+                    context.request_id[:8],
+                    context.provider,
+                    context.model,
+                    error,
+                    latency,
                 )
         except Exception:
             # 拦截器不应影响主流程
@@ -127,7 +138,10 @@ class EventInterceptor(Interceptor):
                     event_type="REQUEST_START",
                     provider=context.provider,
                     model=context.model,
+                    backend=getattr(context, 'backend', None),
+                    method=getattr(context, 'method', None),
                     prompt=context.prompt,
+                    params=getattr(context, 'params', None),
                     request_id=context.request_id,
                 )
             elif point == InterceptorPoint.AFTER_SUCCESS:
@@ -137,8 +151,11 @@ class EventInterceptor(Interceptor):
                     event_type="REQUEST_SUCCESS",
                     provider=context.provider,
                     model=context.model,
+                    backend=getattr(context, 'backend', None),
+                    method=getattr(context, 'method', None),
                     response=response_text,
                     latency_ms=latency,
+                    tokens_used=getattr(context, 'tokens_used', None),
                     request_id=context.request_id,
                 )
             elif point == InterceptorPoint.AFTER_FAILURE:
@@ -147,6 +164,8 @@ class EventInterceptor(Interceptor):
                     event_type="REQUEST_FAILURE",
                     provider=context.provider,
                     model=context.model,
+                    backend=getattr(context, 'backend', None),
+                    method=getattr(context, 'method', None),
                     error=error,
                     latency_ms=latency,
                     request_id=context.request_id,

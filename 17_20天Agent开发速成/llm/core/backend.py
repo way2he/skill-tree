@@ -44,6 +44,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from .exceptions import LLMConfigError, LLMProviderNotFoundError
+from .logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("backend")
 
 
 # =============================================================================
@@ -157,10 +161,12 @@ class _BackendGlobal:
 
     def set(self, backend: BackendLike) -> None:
         """设置全局默认 backend"""
+        old = self._default_backend
         if isinstance(backend, BackendType):
             self._default_backend = backend
         else:
             self._default_backend = BackendType.from_string(backend)
+        _logger.info("全局 backend 设置: %s -> %s", old, self._default_backend)
 
     def get(self) -> Optional[BackendType]:
         """获取全局默认 backend"""
@@ -248,32 +254,42 @@ def resolve_backend(
     # 1. 显式指定（最高优先级）
     if backend is not None:
         if isinstance(backend, BackendType):
+            _logger.debug("Backend 解析: source=显式参数 value=%s", backend.value)
             return backend
-        return BackendType.from_string(backend)
+        result = BackendType.from_string(backend)
+        _logger.debug("Backend 解析: source=显式参数 value=%s", result.value)
+        return result
 
     # 2. YAML 厂商级配置
     if provider:
         yaml_backend = _get_backend_from_yaml_provider(provider)
         if yaml_backend:
+            _logger.debug("Backend 解析: source=YAML厂商配置 provider=%s value=%s", provider, yaml_backend.value)
             return yaml_backend
 
     # 3. 代码全局设置
     global_backend = _BackendGlobal().get()
     if global_backend is not None:
+        _logger.debug("Backend 解析: source=全局设置 value=%s", global_backend.value)
         return global_backend
 
     # 4. 环境变量
     env_backend = os.getenv("LLM_BACKEND", "").strip()
     if env_backend:
-        return BackendType.from_string(env_backend)
+        result = BackendType.from_string(env_backend)
+        _logger.debug("Backend 解析: source=环境变量 value=%s", result.value)
+        return result
 
     # 5. YAML 全局默认
     yaml_default = _get_backend_from_yaml_default()
     if yaml_default:
+        _logger.debug("Backend 解析: source=YAML全局默认 value=%s", yaml_default.value)
         return yaml_default
 
     # 6. 兜底值
-    return BackendType.AIOHTTP if is_async else BackendType.REQUESTS
+    fallback = BackendType.AIOHTTP if is_async else BackendType.REQUESTS
+    _logger.debug("Backend 解析: source=兜底 value=%s (is_async=%s)", fallback.value, is_async)
+    return fallback
 
 
 def _get_backend_from_yaml_provider(provider: str) -> Optional[BackendType]:
@@ -289,8 +305,8 @@ def _get_backend_from_yaml_provider(provider: str) -> Optional[BackendType]:
         provider_config = config.providers.get(provider.lower())
         if provider_config and provider_config.backend:
             return BackendType.from_string(provider_config.backend)
-    except Exception:
-        pass
+    except Exception as e:
+        _logger.debug("YAML backend 配置读取失败: error=%s: %s", type(e).__name__, e)
     return None
 
 
@@ -306,8 +322,8 @@ def _get_backend_from_yaml_default() -> Optional[BackendType]:
         config = load_config(str(config_path))
         if config.default_backend:
             return BackendType.from_string(config.default_backend)
-    except Exception:
-        pass
+    except Exception as e:
+        _logger.debug("YAML backend 配置读取失败: error=%s: %s", type(e).__name__, e)
     return None
 
 
@@ -972,7 +988,10 @@ class BackendSwitcher:
                 f"已配置: {list(self._backends.keys())}"
             )
 
+        old_current = self._current_backend
         self._current_backend = backend_value
+        _logger.info("BackendSwitcher 切换: provider=%s %s -> %s",
+                    self._provider, old_current, backend_value)
         return self
 
     def get_client(self):
@@ -1030,6 +1049,7 @@ class BackendSwitcher:
                 return self._get_or_create_client(backend_value, async_mode=False)
             except Exception as e:
                 errors.append(f"{backend_value}: {str(e)}")
+                _logger.warning("故障转移失败: backend=%s error=%s: %s", backend_value, type(e).__name__, e)
 
         raise LLMConfigError(
             f"所有实现层都失败: {', '.join(errors)}"

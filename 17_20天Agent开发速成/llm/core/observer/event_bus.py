@@ -7,6 +7,10 @@ import threading
 from typing import Dict, List, Callable, Optional, Any
 
 from .events import EventType, LLMEvent
+from ..logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("event_bus")
 
 
 class EventBus:
@@ -35,10 +39,16 @@ class EventBus:
         with self._lock:
             if event_type is None:
                 self._all_subscribers.append(handler)
+                _logger.debug("订阅事件: event_type=%s handler=%s",
+                             event_type.value if event_type else "*",
+                             getattr(handler, '__name__', repr(handler)))
             else:
                 if event_type not in self._subscribers:
                     self._subscribers[event_type] = []
                 self._subscribers[event_type].append(handler)
+                _logger.debug("订阅事件: event_type=%s handler=%s",
+                             event_type.value if event_type else "*",
+                             getattr(handler, '__name__', repr(handler)))
     
     def unsubscribe(
         self,
@@ -55,10 +65,16 @@ class EventBus:
             if event_type is None:
                 if handler in self._all_subscribers:
                     self._all_subscribers.remove(handler)
+                    _logger.debug("取消订阅: event_type=%s handler=%s",
+                                 event_type.value if event_type else "*",
+                                 getattr(handler, '__name__', repr(handler)))
             else:
                 if event_type in self._subscribers:
                     if handler in self._subscribers[event_type]:
                         self._subscribers[event_type].remove(handler)
+                        _logger.debug("取消订阅: event_type=%s handler=%s",
+                                     event_type.value if event_type else "*",
+                                     getattr(handler, '__name__', repr(handler)))
     
     def publish(self, event: LLMEvent):
         """发布事件
@@ -79,9 +95,16 @@ class EventBus:
         for handler in subscribers:
             try:
                 handler(event)
-            except Exception:
-                # 捕获异常，避免一个 handler 失败影响其他的
-                pass
+            except Exception as exc:
+                # 记录 handler 执行异常，不再静默吞掉
+                _logger.error(
+                    "事件处理器执行异常: handler=%s event_type=%s error=%s: %s",
+                    getattr(handler, '__name__', repr(handler)),
+                    event.event_type.value,
+                    type(exc).__name__,
+                    exc,
+                    exc_info=True,
+                )
     
     def clear(self):
         """清空所有订阅者"""

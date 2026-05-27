@@ -8,6 +8,11 @@ import threading
 from dataclasses import dataclass
 from typing import Optional
 
+from ..logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("rate_limiter")
+
 
 @dataclass
 class RateLimiterConfig:
@@ -43,6 +48,10 @@ class TokenBucketRateLimiter:
         
         # 锁（线程安全）
         self._lock = threading.Lock()
+        _logger.info(
+            "限流器初始化: rate=%.2f req/s capacity=%d",
+            self._rate, self._capacity,
+        )
     
     def _refill(self):
         """补充令牌"""
@@ -74,6 +83,7 @@ class TokenBucketRateLimiter:
                     return True
                 
                 if timeout is None:
+                    _logger.debug("限流拒绝: available_tokens=%.2f", self._tokens)
                     return False
                 
                 elapsed = time.time() - start_time
@@ -82,6 +92,12 @@ class TokenBucketRateLimiter:
                 
                 # 计算需要等待的时间
                 wait_time = (1.0 - self._tokens) / self._rate
+                # 记录限流等待
+                _logger.debug(
+                    "限流等待: wait=%.3fs available_tokens=%.2f",
+                    min(wait_time, timeout - elapsed),
+                    self._tokens,
+                )
                 # 等待，但不超过剩余超时时间
                 time.sleep(min(wait_time, timeout - elapsed))
     

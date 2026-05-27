@@ -27,6 +27,10 @@ import time
 from typing import Any, Callable, Dict, Optional
 
 from .types import CacheConfig
+from .logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("cache")
 
 
 # =============================================================================
@@ -127,11 +131,13 @@ class LLMCache:
                 # 检查是否过期
                 if time.time() - entry["timestamp"] < self.config.ttl_seconds:
                     self._hits += 1
+                    _logger.debug("缓存命中: key=%s", key)
                     return entry["value"]
                 else:
                     # 删除过期条目
                     del self._cache[key]
 
+        _logger.debug("缓存未命中: key=%s", key)
         self._misses += 1
         return None
 
@@ -167,6 +173,7 @@ class LLMCache:
                 "value": value,
                 "timestamp": time.time(),
             }
+            _logger.debug("缓存写入: key=%s ttl=%ds", key, self.config.ttl_seconds)
 
     def delete(
         self,
@@ -218,6 +225,9 @@ class LLMCache:
         for k in expired_keys:
             del self._cache[k]
 
+        if expired_keys:
+            _logger.debug("缓存过期清理: removed=%d entries", len(expired_keys))
+
         # 如果仍然超容量，删除最旧的条目
         if len(self._cache) >= self.config.max_size:
             sorted_items = sorted(
@@ -227,6 +237,11 @@ class LLMCache:
             to_remove = len(self._cache) - self.config.max_size + 1
             for k, _ in sorted_items[:to_remove]:
                 del self._cache[k]
+
+            _logger.info(
+                "缓存容量超限清理: removed=%d remaining=%d max=%d",
+                to_remove, len(self._cache), self.config.max_size,
+            )
 
     @property
     def size(self) -> int:

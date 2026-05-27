@@ -23,6 +23,10 @@ from typing import Any, Callable, Type, Optional
 
 from .exceptions import LLMProviderNotFoundError
 from .adapter import UnifiedAdapter, IProviderClient
+from .logging_utils import get_logger
+
+# 模块级日志器
+_logger = get_logger("factory")
 
 # 默认实现方式
 _DEFAULT_IMPLEMENTATION = "requests"
@@ -52,6 +56,7 @@ class ProviderRegistry:
             provider_class: Provider 类（实现 IProviderClient）
         """
         self._providers[name] = provider_class
+        _logger.debug("Provider 注册: name=%s class=%s", name, provider_class.__name__)
 
     def create(self, name: str, **kwargs: Any) -> UnifiedAdapter:
         """
@@ -66,6 +71,7 @@ class ProviderRegistry:
         """
         if name not in self._providers:
             supported = list(self._providers.keys())
+            _logger.error("Provider 未找到: name=%s supported=%s", name, supported)
             raise LLMProviderNotFoundError(
                 f"未知提供者: {name}，支持的选项: {supported}",
                 provider=name
@@ -76,7 +82,9 @@ class ProviderRegistry:
         provider = provider_class(**kwargs)
 
         # 包装为 UnifiedAdapter
-        return UnifiedAdapter(provider)
+        adapter = UnifiedAdapter(provider)
+        _logger.info("Provider 创建成功: name=%s", name)
+        return adapter
 
     def list_providers(self) -> list[str]:
         """列出所有已注册的提供者"""
@@ -306,8 +314,8 @@ def _try_register_implementation(implementation: str) -> None:
             from llm.implementations.doubao_sdk.providers.doubao import DoubaoProvider
             register_provider("doubao", DoubaoProvider)
     
-    except ImportError:
-        pass
+    except ImportError as e:
+        _logger.warning("实现方式导入失败: implementation=%s error=%s", implementation, e)
 
 
 # =============================================================================
@@ -316,7 +324,9 @@ def _try_register_implementation(implementation: str) -> None:
 
 def _register_builtin_providers() -> None:
     """注册内置提供者（默认使用 requests 实现）"""
+    _logger.debug("开始注册内置 providers: implementation=%s", _DEFAULT_IMPLEMENTATION)
     _try_register_implementation(_DEFAULT_IMPLEMENTATION)
+    _logger.debug("内置 providers 注册完成: count=%d", len(_registry.list_providers()))
 
 
 # 注册内置提供者

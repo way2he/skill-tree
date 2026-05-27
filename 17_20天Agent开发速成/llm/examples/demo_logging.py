@@ -118,8 +118,29 @@ def demo_custom_handler():
               f"provider={ev.provider} model={ev.model} method={ev.method}")
 
 
+def demo_trace_id():
+    """场景 5：trace_id 追踪"""
+    print("\n=== 场景 5：trace_id 追踪 ===")
+    from llm.core import enable_logging, disable_logging, trace_context, get_trace_id
+
+    enable_logging(level="INFO")
+
+    with trace_context():
+        tid = get_trace_id()
+        print(f"  当前 trace_id: {tid}")
+        try:
+            from llm.core import get_llm
+            client = get_llm()
+            client.generate("hi")
+        except Exception as e:
+            print(f"  调用失败: {e}")
+
+    disable_logging()
+
+
 if __name__ == "__main__":
     demo_basic_console()
     demo_file_logging()
     demo_metrics()
     demo_custom_handler()
+    demo_trace_id()
