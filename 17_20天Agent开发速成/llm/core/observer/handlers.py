@@ -148,8 +148,8 @@ class LoggingHandler:
             parts.append(f"backend={event.backend}")
         if event.method:
             parts.append(f"method={event.method}")
-        if event.latency_ms is not None:
-            parts.append(f"latency={event.latency_ms:.2f}ms")
+        if event.latency is not None:
+            parts.append(f"latency={event.latency:.3f}s")
         if event.tokens_used is not None:
             parts.append(f"tokens={event.tokens_used}")
         if event.retry_attempt is not None:
@@ -217,12 +217,12 @@ class MetricsHandler:
 
         elif event.event_type == EventType.REQUEST_SUCCESS:
             self._success_count += 1
-            if event.latency_ms is not None:
-                self._latencies.append(event.latency_ms)
+            if event.latency is not None:
+                self._latencies.append(event.latency)
             if event.provider:
                 self._provider_metrics[event.provider]['success'] += 1
-                if event.latency_ms is not None:
-                    self._provider_metrics[event.provider]['latencies'].append(event.latency_ms)
+                if event.latency is not None:
+                    self._provider_metrics[event.provider]['latencies'].append(event.latency)
 
         elif event.event_type == EventType.REQUEST_FAILURE:
             self._failure_count += 1
@@ -257,7 +257,7 @@ class MetricsHandler:
                 'count': data['count'],
                 'success': data['success'],
                 'failure': data['failure'],
-                'avg_latency_ms': provider_avg_latency,
+                'avg_latency': provider_avg_latency,
                 'success_rate': provider_success_rate,
             }
 
@@ -265,7 +265,7 @@ class MetricsHandler:
             'total_requests': self._request_count,
             'success_count': self._success_count,
             'failure_count': self._failure_count,
-            'avg_latency_ms': avg_latency,
+            'avg_latency': avg_latency,
             'qps': qps,
             'success_rate': success_rate,
             'uptime_seconds': total_time,

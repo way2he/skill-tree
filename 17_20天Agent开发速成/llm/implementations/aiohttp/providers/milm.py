@@ -10,20 +10,23 @@ from typing import Optional, Dict, Any, List
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient, AsyncLLMResponse
+from .base import BaseAsyncProviderClient
 
 
-class AsyncMiLMClient(BaseAsyncLLMClient):
+class MiLMProvider(BaseAsyncProviderClient):
     """小米小爱大模型异步客户端"""
 
-    DEFAULT_BASE_URL = "https://api.mi.ai/v1"
+    PROVIDER_NAME = "milm"
     DEFAULT_MODEL = "milm-pro"
+    DEFAULT_BASE_URL = "https://api.mi.ai/v1"
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         model: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
         timeout: int = 60,
     ):
         """
@@ -33,6 +36,8 @@ class AsyncMiLMClient(BaseAsyncLLMClient):
             api_key: 小米开放平台 API Key，如果不传则从环境变量 XIAOMI_API_KEY 获取
             base_url: API 基础地址，默认为小米开放平台地址
             model: 默认使用的模型名称
+            system_prompt: 系统提示词
+            temperature: 温度参数
             timeout: 请求超时时间（秒）
         """
         self.api_key = api_key or os.getenv("XIAOMI_API_KEY")
@@ -41,57 +46,36 @@ class AsyncMiLMClient(BaseAsyncLLMClient):
 
         self.base_url = base_url or self.DEFAULT_BASE_URL
         self.model = model or self.DEFAULT_MODEL
+        self.system_prompt = system_prompt
+        self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        top_p: float = 1.0,
-        stream: bool = False,
-        **kwargs,
-    ) -> AsyncLLMResponse:
+    def _build_messages(self, prompt: str) -> List[Dict[str, str]]:
+        """构建 OpenAI API 格式的消息列表"""
+        messages: List[Dict[str, str]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """
         调用小米小爱大模型生成文本
 
         Args:
             prompt: 用户输入的提示词
-            system_prompt: 系统提示词
-            model: 模型名称，如果不传则使用初始化时的默认模型
-            temperature: 温度参数，控制随机性
-            max_tokens: 最大生成 token 数
-            top_p: top_p 采样参数
-            stream: 是否使用流式输出（暂未支持）
-            **kwargs: 其他传递给 API 的参数
+            **kwargs: 其他传递给 API 的参数，如 model, temperature 等
 
         Returns:
-            AsyncLLMResponse: 包含生成结果和元数据的响应对象
+            str: 生成的文本内容
         """
-        if stream:
-            raise NotImplementedError("流式输出暂未支持")
+        messages = self._build_messages(prompt)
 
-        # 构建消息列表
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-
-        # 构建请求体
         payload = {
-            "model": model or self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
-            "temperature": temperature,
-            "top_p": top_p,
+            "temperature": kwargs.get("temperature", self.temperature),
         }
-
-        if max_tokens is not None:
-            payload["max_tokens"] = max_tokens
-
-        # 添加其他参数
-        payload.update(kwargs)
 
         # 发送请求
         url = f"{self.base_url}/chat/completions"
@@ -100,56 +84,56 @@ class AsyncMiLMClient(BaseAsyncLLMClient):
             "Authorization": f"Bearer {self.api_key}",
         }
 
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
                 url,
                 json=payload,
                 headers=headers,
-                timeout=self.timeout,
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
                     raise Exception(f"API 请求失败: {response.status} - {error_text}")
 
                 result = await response.json()
+                return str(result["choices"][0]["message"]["content"])
 
-                # 解析响应
-                content = result["choices"][0]["message"]["content"]
-                usage = result.get("usage", {})
+    async def agenerate_json(
+        self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
+    ) -> str:
+        """生成 JSON 格式回复"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
-                return AsyncLLMResponse(
-                    content=content,
-                    model=result.get("model", model or self.model),
-                    usage=usage,
-                    raw_response=result,
-                )
+        messages = self._build_messages(prompt)
+        if schema:
+            schema_str = json.dumps(schema, ensure_ascii=False)
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"你是一个严格的 JSON 生成器。必须返回有效的 JSON，格式如下：{schema_str}。只输出 JSON，不要有任何解释。",
+                }
+            )
 
-    async def generate_async(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        top_p: float = 1.0,
-        stream: bool = False,
-        **kwargs,
-    ) -> AsyncLLMResponse:
-        """
-        异步生成文本（与 generate 方法相同，保持接口兼容）
-        """
-        return await self.generate(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            stream=stream,
-            **kwargs,
-        )
+        payload = {
+            "model": kwargs.get("model", self.model),
+            "messages": messages,
+            "temperature": 0.3,
+            "response_format": {"type": "json_object"},
+        }
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+        timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                f"{self.base_url}/chat/completions", headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                result = await response.json()
+                return str(result["choices"][0]["message"]["content"])
+
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（OpenAI 兼容 SSE，异步）"""
         import json as _json
         headers = {
@@ -157,15 +141,10 @@ class AsyncMiLMClient(BaseAsyncLLMClient):
             "Content-Type": "application/json",
             "Accept": "text/event-stream",
         }
-        messages: list[dict[str, str]] = []
-        sys_p = getattr(self, "system_prompt", None)
-        if sys_p:
-            messages.append({"role": "system", "content": sys_p})
-        messages.append({"role": "user", "content": prompt})
         payload: dict[str, Any] = {
-            "model": kwargs.get("model") or self.model,
-            "messages": messages,
-            "temperature": kwargs.get("temperature", 0.7),
+            "model": kwargs.get("model", self.model),
+            "messages": self._build_messages(prompt),
+            "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
         }
         timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
@@ -189,3 +168,8 @@ class AsyncMiLMClient(BaseAsyncLLMClient):
                             yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncMiLMClient(MiLMProvider):
+    pass

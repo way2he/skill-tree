@@ -12,30 +12,49 @@ Day02 必写代码 2：思维链 CoT (Chain of Thought)
 """
 
 import sys
-sys.path.append("..")
-from llm.openai import chat_completion, get_response_content
+from pathlib import Path
+
+# 将项目根目录加入 sys.path，确保能导入 llm 库
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from llm.core import get_llm
 
 
 # ============================================================
 # 技巧 1：Zero-shot CoT —— 加一句"让我一步步思考"
 # ============================================================
 def cot_zero_shot(question: str) -> str:
-    """Zero-shot CoT：最简单，加一句魔法话术"""
-    prompt = f"""
-{question}
+    """
+    Zero-shot CoT：最简单，加一句魔法话术
 
-请你一步步思考，先列出已知条件，再分析未知量，最后给出答案。
-"""
-    messages = [{"role": "user", "content": prompt}]
-    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
-    return get_response_content(response)
+    Args:
+        question: 用户提出的问题
+
+    Returns:
+        str: 模型生成的思考过程和答案
+    """
+    prompt = f"""{question}
+
+请你一步步思考，先列出已知条件，再分析未知量，最后给出答案。"""
+    try:
+        llm = get_llm()
+        return llm.generate(prompt=prompt, temperature=0.3)
+    except Exception as e:
+        return f"调用 LLM 失败: {e}"
 
 
 # ============================================================
 # 技巧 2：Few-shot CoT —— 给思考过程示例
 # ============================================================
 def cot_few_shot(question: str) -> str:
-    """Few-shot CoT：给几个完整的思考示例"""
+    """
+    Few-shot CoT：给几个完整的思考示例
+
+    Args:
+        question: 用户提出的问题
+
+    Returns:
+        str: 模型按示例格式生成的思考过程和答案
+    """
     prompt = f"""
 示例 1：
 问题：小明有 5 个苹果，吃了 2 个，又买了 3 个，他现在有几个？
@@ -56,43 +75,55 @@ def cot_few_shot(question: str) -> str:
 现在请按同样的格式解答：
 问题：{question}
 """
-    messages = [{"role": "user", "content": prompt}]
-    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
-    return get_response_content(response)
+    try:
+        llm = get_llm()
+        return llm.generate(prompt=prompt, temperature=0.3)
+    except Exception as e:
+        return f"调用 LLM 失败: {e}"
 
 
 # ============================================================
 # 技巧 3：Self-Consistency —— 多次采样取多数
 # ============================================================
 def cot_self_consistency(question: str, n: int = 5) -> dict:
-    """Self-Consistency：让模型回答 n 次，取出现次数最多的答案"""
+    """
+    Self-Consistency：让模型回答 n 次，取出现次数最多的答案
+
+    Args:
+        question: 用户提出的问题
+        n: 采样次数，默认 5 次
+
+    Returns:
+        dict: 包含 all_answers / final_answer / vote_count / confidence
+    """
     from collections import Counter
-    
+
+    llm = get_llm()
     answers = []
+
     for i in range(n):
-        messages = [{
-            "role": "user",
-            "content": f"{question}\n\n一步步思考，给出最终答案。"
-        }]
-        response = chat_completion(model="gpt-3.5-turbo", messages=messages, temperature=0.9)
-        # 这里简化：取最后一行作为答案
-        text = get_response_content(response)
-        answers.append(text.split("\n")[-1].strip())
-    
+        try:
+            prompt = f"{question}\n\n一步步思考，给出最终答案。"
+            text = llm.generate(prompt=prompt, temperature=0.9)
+            # 取最后一行作为答案
+            answers.append(text.split("\n")[-1].strip())
+        except Exception as e:
+            answers.append(f"[第{i+1}次调用失败: {e}]")
+
     # 取出现次数最多的答案
     most_common = Counter(answers).most_common(1)[0]
     return {
         "all_answers": answers,
         "final_answer": most_common[0],
         "vote_count": most_common[1],
-        "confidence": most_common[1] / n
+        "confidence": most_common[1] / n,
     }
 
 
 # ============================================================
 # 技巧 4：分步求解 —— 拆解复杂任务
 # ============================================================
-DECOMPOSITION_PROMPT = """
+DECOMPOSITION_SYSTEM = """
 你是一个复杂任务分解专家。
 
 请把用户的复杂问题拆解成 3-5 个子问题，然后依次解答每个子问题，
@@ -115,19 +146,30 @@ DECOMPOSITION_PROMPT = """
 
 
 def cot_decomposition(question: str) -> str:
-    """分步求解：复杂任务先拆解再综合"""
-    messages = [
-        {"role": "system", "content": DECOMPOSITION_PROMPT},
-        {"role": "user", "content": question}
-    ]
-    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
-    return get_response_content(response)
+    """
+    分步求解：复杂任务先拆解再综合
+
+    Args:
+        question: 用户提出的复杂问题
+
+    Returns:
+        str: 模型生成的任务分解和综合答案
+    """
+    try:
+        llm = get_llm()
+        return llm.generate(
+            prompt=question,
+            system=DECOMPOSITION_SYSTEM,
+            temperature=0.3,
+        )
+    except Exception as e:
+        return f"调用 LLM 失败: {e}"
 
 
 # ============================================================
 # 反面教材：不该用 CoT 的场景
 # ============================================================
-def when_not_to_use_cot():
+def when_not_to_use_cot() -> None:
     """什么场景不该用 CoT"""
     print("\n❌ 不该用 CoT 的场景：")
     print("  1. 简单的事实查询（如：今天星期几）→ 多此一举")
@@ -165,24 +207,24 @@ CoT 有效的核心原因有 3 个：
 
 if __name__ == "__main__":
     question = "一个班 30 个学生，其中 60% 是女生，男生比女生少几个？"
-    
+
     print("=" * 60)
     print(f"问题：{question}")
     print("=" * 60)
-    
+
     print("\n🎯 技巧 1：Zero-shot CoT")
     # print(cot_zero_shot(question))
-    
+
     print("\n🎯 技巧 2：Few-shot CoT")
     # print(cot_few_shot(question))
-    
+
     print("\n🎯 技巧 3：Self-Consistency（多次采样取多数）")
     # result = cot_self_consistency(question, n=5)
     # print(f"最终答案：{result['final_answer']}")
     # print(f"置信度：{result['confidence']:.0%}")
-    
+
     print("\n🎯 技巧 4：分步求解（复杂任务）")
     complex_q = "如果地球人口每年增长 1.1%，现在 80 亿，多少年后会达到 100 亿？"
     # print(cot_decomposition(complex_q))
-    
+
     when_not_to_use_cot()

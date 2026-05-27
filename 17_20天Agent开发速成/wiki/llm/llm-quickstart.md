@@ -333,7 +333,7 @@ async_llm = create_llm_async_from_config("llm/core/llm_config.yaml")
 把自己的 client 类注册进框架，就能被 `get_llm` 统一调度。
 
 ```python
-from llm.core import register_provider, create_llm, RequestsLLMAdapter
+from llm.core import register_provider, create_llm
 
 class MyClient:
     default_model = "my-v1"
@@ -346,7 +346,7 @@ class MyClient:
         for ch in self.prefix + prompt: yield ch
 
 # 注册（1 行）
-register_provider("myllm", MyClient, RequestsLLMAdapter)
+register_provider("myllm", MyClient)
 
 # 使用（和官方 25 家一模一样）
 llm = create_llm("myllm", prefix="🎉 ")
@@ -354,7 +354,7 @@ print(llm.generate("hello"))                    # 🎉 hello
 for ch in llm.generate_stream("流式"): print(ch, end="")
 ```
 
-异步同理：`register_async_provider(name, AsyncClient, AioHttpLLMAdapter)`
+异步同理：`register_async_provider(name, AsyncClient)`
 
 👉 看完整示例：`py -3 -m llm.demo.demo_register`
 

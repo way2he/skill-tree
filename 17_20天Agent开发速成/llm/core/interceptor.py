@@ -83,30 +83,46 @@ class LoggingInterceptor(Interceptor):
     ) -> None:
         """日志拦截"""
         try:
+            # 构建 backend 信息字符串
+            backend_info = ""
+            if context.backend:
+                backend_info = f" [{context.backend}]"
+            
+            # 构建客户端类型信息
+            client_info = ""
+            if context.client_type:
+                client_info = f" ({context.client_type})"
+            
             if point == InterceptorPoint.BEFORE_REQUEST:
                 _logger.info(
-                    "[%s] %s/%s - 请求开始: %s",
+                    "[%s] %s/%s%s%s - 请求开始: %s",
                     context.request_id[:8],
                     context.provider,
                     context.model,
+                    backend_info,
+                    client_info,
                     context.prompt[:50],
                 )
             elif point == InterceptorPoint.AFTER_SUCCESS:
-                latency = (time.perf_counter() - context.start_time) * 1000
+                latency = (time.perf_counter() - context.start_time)
                 _logger.info(
-                    "[%s] %s/%s - 成功 (%.0fms)",
+                    "[%s] %s/%s%s%s - 成功 (%.3fs)",
                     context.request_id[:8],
                     context.provider,
                     context.model,
+                    backend_info,
+                    client_info,
                     latency,
                 )
             elif point == InterceptorPoint.AFTER_FAILURE:
-                latency = (time.perf_counter() - context.start_time) * 1000
+                latency = (time.perf_counter() - context.start_time)
                 _logger.error(
-                    "[%s] %s/%s - 失败: %s (%.0fms)",
+                    "[%s] %s/%s%s%s - 失败: %s (%.3fs)",
                     context.request_id[:8],
                     context.provider,
                     context.model,
+                    backend_info,
+                    client_info,
                     error,
                     latency,
                 )
@@ -145,7 +161,7 @@ class EventInterceptor(Interceptor):
                     request_id=context.request_id,
                 )
             elif point == InterceptorPoint.AFTER_SUCCESS:
-                latency = (time.perf_counter() - context.start_time) * 1000
+                latency = (time.perf_counter() - context.start_time)
                 response_text = result if isinstance(result, str) else str(result)
                 publish_llm_event(
                     event_type="REQUEST_SUCCESS",
@@ -154,12 +170,12 @@ class EventInterceptor(Interceptor):
                     backend=getattr(context, 'backend', None),
                     method=getattr(context, 'method', None),
                     response=response_text,
-                    latency_ms=latency,
+                    latency=latency,
                     tokens_used=getattr(context, 'tokens_used', None),
                     request_id=context.request_id,
                 )
             elif point == InterceptorPoint.AFTER_FAILURE:
-                latency = (time.perf_counter() - context.start_time) * 1000
+                latency = (time.perf_counter() - context.start_time)
                 publish_llm_event(
                     event_type="REQUEST_FAILURE",
                     provider=context.provider,
@@ -167,7 +183,7 @@ class EventInterceptor(Interceptor):
                     backend=getattr(context, 'backend', None),
                     method=getattr(context, 'method', None),
                     error=error,
-                    latency_ms=latency,
+                    latency=latency,
                     request_id=context.request_id,
                 )
         except Exception:
@@ -187,7 +203,7 @@ class MetricsInterceptor(Interceptor):
         self._request_count: int = 0
         self._success_count: int = 0
         self._failure_count: int = 0
-        self._total_latency_ms: float = 0.0
+        self._total_latency: float = 0.0
 
     def intercept(
         self,
@@ -201,13 +217,13 @@ class MetricsInterceptor(Interceptor):
             if point == InterceptorPoint.BEFORE_REQUEST:
                 self._request_count += 1
             elif point == InterceptorPoint.AFTER_SUCCESS:
-                latency = (time.perf_counter() - context.start_time) * 1000
+                latency = (time.perf_counter() - context.start_time)
                 self._success_count += 1
-                self._total_latency_ms += latency
+                self._total_latency += latency
             elif point == InterceptorPoint.AFTER_FAILURE:
-                latency = (time.perf_counter() - context.start_time) * 1000
+                latency = (time.perf_counter() - context.start_time)
                 self._failure_count += 1
-                self._total_latency_ms += latency
+                self._total_latency += latency
         except Exception:
             pass
 
@@ -220,7 +236,7 @@ class MetricsInterceptor(Interceptor):
             包含请求数、成功率、平均延迟的字典
         """
         avg_latency = (
-            self._total_latency_ms / self._request_count
+            self._total_latency / self._request_count
             if self._request_count > 0
             else 0.0
         )
@@ -233,7 +249,7 @@ class MetricsInterceptor(Interceptor):
             "request_count": self._request_count,
             "success_count": self._success_count,
             "failure_count": self._failure_count,
-            "avg_latency_ms": round(avg_latency, 2),
+            "avg_latency": round(avg_latency, 3),
             "success_rate": round(success_rate, 1),
         }
 
@@ -242,7 +258,7 @@ class MetricsInterceptor(Interceptor):
         self._request_count = 0
         self._success_count = 0
         self._failure_count = 0
-        self._total_latency_ms = 0.0
+        self._total_latency = 0.0
 
 
 # =============================================================================

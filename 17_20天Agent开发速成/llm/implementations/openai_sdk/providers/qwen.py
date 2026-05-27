@@ -17,11 +17,13 @@ class QwenClient(OpenAICompatibleClient):
     通过设置 DASHSCOPE_API_KEY 环境变量或传入 api_key 参数进行认证。
 
     Attributes:
+        PROVIDER_NAME: 提供者名称
         DEFAULT_BASE_URL: 默认 API 基础地址
         DEFAULT_MODEL: 默认使用的模型名称
         ENV_API_KEY: 环境变量中 API Key 的名称
     """
 
+    PROVIDER_NAME: str = "qwen"
     DEFAULT_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     DEFAULT_MODEL: str = "qwen-plus"
     ENV_API_KEY: str = "DASHSCOPE_API_KEY"
@@ -66,3 +68,7 @@ class QwenClient(OpenAICompatibleClient):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+
+
+# Provider alias for factory registration
+QwenProvider = QwenClient

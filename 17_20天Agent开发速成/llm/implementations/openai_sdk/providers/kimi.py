@@ -17,11 +17,13 @@ class KimiClient(OpenAICompatibleClient):
     通过设置 MOONSHOT_API_KEY 环境变量或传入 api_key 参数进行认证。
 
     Attributes:
+        PROVIDER_NAME: 提供者名称
         DEFAULT_BASE_URL: 默认 API 基础地址
         DEFAULT_MODEL: 默认使用的模型名称
         ENV_API_KEY: 环境变量中 API Key 的名称
     """
 
+    PROVIDER_NAME: str = "kimi"
     DEFAULT_BASE_URL: str = "https://api.moonshot.cn/v1"
     DEFAULT_MODEL: str = "moonshot-v1-8k"
     ENV_API_KEY: str = "MOONSHOT_API_KEY"
@@ -66,3 +68,7 @@ class KimiClient(OpenAICompatibleClient):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+
+
+# Provider alias for factory registration
+KimiProvider = KimiClient

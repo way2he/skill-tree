@@ -9,10 +9,10 @@ from typing import Any, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncMiniMaxClient(BaseAsyncLLMClient):
+class MiniMaxProvider(BaseAsyncProviderClient):
     """
     异步 MiniMax 客户端
 
@@ -24,10 +24,13 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "minimax"
+    DEFAULT_MODEL = "abab6.5s-chat"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "abab6.5s-chat",
+        model: str = DEFAULT_MODEL,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         timeout: int = 60,
@@ -42,20 +45,25 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    def _build_messages(self, prompt: str) -> List[dict[str, str]]:
+        """构建 OpenAI API 格式的消息列表"""
+        messages: List[dict[str, str]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
-        messages: List[dict[str, str]] = []
-        if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages = self._build_messages(prompt)
 
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": kwargs.get("temperature", self.temperature),
         }
@@ -73,7 +81,7 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
                     raise Exception(f"MiniMax API 错误: {result}")
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -96,7 +104,7 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
         messages.append({"role": "user", "content": prompt})
 
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": 0.3,
         }
@@ -114,7 +122,7 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
                     raise Exception(f"MiniMax API 错误: {result}")
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（OpenAI 兼容 SSE，异步）"""
         import json as _json
         headers = {
@@ -123,11 +131,13 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
             "Accept": "text/event-stream",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": self._build_messages(prompt),
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
         }
+        if self.group_id:
+            payload["group_id"] = self.group_id
         timeout = aiohttp.ClientTimeout(total=kwargs.get("timeout", self.timeout))
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
@@ -149,3 +159,8 @@ class AsyncMiniMaxClient(BaseAsyncLLMClient):
                             yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncMinimaxClient(MinimaxProvider):
+    pass

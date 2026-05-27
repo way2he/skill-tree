@@ -61,7 +61,8 @@ class BaseProviderClient(ABC):
     @property
     def default_model(self) -> str:
         """默认模型"""
-        return self.DEFAULT_MODEL
+        # 优先使用实例属性（通过构造函数传入的配置），否则使用类属性默认值
+        return getattr(self, "model", None) or self.DEFAULT_MODEL
 
     @abstractmethod
     def generate(self, prompt: str, **kwargs: Any) -> str:

@@ -95,7 +95,7 @@ class LLMResponse:
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
     finish_reason: Optional[str] = None
-    latency_ms: Optional[float] = None
+    latency: Optional[float] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -169,6 +169,8 @@ class InvocationContext:
         start_time: 开始时间
         request_id: 请求 ID
         kwargs: 其他参数
+        backend: 底层实现方式（requests/aiohttp/openai_sdk）
+        client_type: 底层客户端类型（类名）
     """
     provider: str
     model: str
@@ -177,6 +179,8 @@ class InvocationContext:
     start_time: float
     request_id: str
     kwargs: Dict[str, Any] = field(default_factory=dict)
+    backend: Optional[str] = None
+    client_type: Optional[str] = None
 
 
 # =============================================================================

@@ -88,14 +88,13 @@ def get_user(user_id):
 """
 
 
-def review_code(system_prompt, code, model="qwen3.5:9b"):
+def review_code(system_prompt, code):
     """
     用指定的 system prompt 审查代码
     
     Args:
         system_prompt: 系统提示词
         code: 待审查的代码
-        model: Ollama 模型名称，默认 qwen3.5:9b
     
     Returns:
         str: 模型返回的审查结果
@@ -106,7 +105,6 @@ def review_code(system_prompt, code, model="qwen3.5:9b"):
         response = llm.generate(
             prompt=full_prompt,
             system=system_prompt,
-            model=model,
             temperature=0.3
         )
         return response
@@ -175,8 +173,14 @@ if __name__ == "__main__":
     # print("\n" + "=" * 60)
     # print(GOLDEN_FORMULA)
     # print("=" * 60)
-
-    # 零参数调用 - 系统自动选择提供商
+    
+    # 启用 LLM 调用日志
+    from llm.core import enable_logging, clear_llm_cache
+    enable_logging(level="DEBUG")  # 开启日志
+    
+    # 清除缓存，确保从配置文件重新读取参数
+    clear_llm_cache()
+    # 零参数调用 - 系统自动选择提供商（从配置文件读取模型）
     llm = get_llm()
     result = llm.generate("你好")
     print(result)

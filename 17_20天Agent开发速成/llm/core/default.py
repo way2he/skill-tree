@@ -132,6 +132,40 @@ def resolve_provider_and_backend(
     return provider_name, backend_type
 
 
+def _read_provider_config(provider_name: str) -> dict:
+    """从配置文件读取指定 provider 的配置参数"""
+    if not CONFIG_PATH.exists():
+        return {}
+    try:
+        from .config import load_config
+        config = load_config(str(CONFIG_PATH))
+        provider_config = config.providers.get(provider_name)
+        if provider_config:
+            kwargs = {}
+            if provider_config.model:
+                kwargs['model'] = provider_config.model
+            if provider_config.base_url:
+                kwargs['base_url'] = provider_config.base_url
+            if provider_config.api_key:
+                kwargs['api_key'] = provider_config.api_key
+            if provider_config.system_prompt:
+                kwargs['system_prompt'] = provider_config.system_prompt
+            if provider_config.temperature is not None:
+                kwargs['temperature'] = provider_config.temperature
+            if provider_config.max_tokens is not None:
+                kwargs['max_tokens'] = provider_config.max_tokens
+            if provider_config.timeout is not None:
+                kwargs['timeout'] = provider_config.timeout
+            if provider_config.ak:
+                kwargs['ak'] = provider_config.ak
+            if provider_config.sk:
+                kwargs['sk'] = provider_config.sk
+            return kwargs
+    except Exception as e:
+        _logger.debug("读取 provider 配置失败: %s: %s", type(e).__name__, e)
+    return {}
+
+
 # —— 缓存层 ——
 # 把缓存 key 锁定为「解析后的字符串」，这样
 #   get_llm()、get_llm(ProviderName.OLLAMA)、get_llm("ollama")
@@ -139,19 +173,25 @@ def resolve_provider_and_backend(
 @lru_cache(maxsize=16)
 def _build_sync(name: str, backend: Optional[str] = None):
     """构建同步 LLM 实例"""
+    # 从配置文件读取参数
+    provider_kwargs = _read_provider_config(name)
+    
     # 使用 factory 模块的 create_llm 函数创建实例
     if backend:
-        return create_llm(name, implementation=backend)
-    return create_llm(name)
+        return create_llm(name, implementation=backend, **provider_kwargs)
+    return create_llm(name, **provider_kwargs)
 
 
 @lru_cache(maxsize=16)
 def _build_async(name: str, backend: Optional[str] = None):
     """构建异步 LLM 实例"""
+    # 从配置文件读取参数
+    provider_kwargs = _read_provider_config(name)
+    
     # 使用 factory 模块的 create_async_llm 函数创建实例
     if backend:
-        return create_async_llm(name, implementation=backend)
-    return create_async_llm(name)
+        return create_async_llm(name, implementation=backend, **provider_kwargs)
+    return create_async_llm(name, **provider_kwargs)
 
 
 def get_llm(provider=None, backend: Optional[BackendLike] = None):
@@ -200,3 +240,13 @@ def current_provider() -> str:
 def current_backend() -> Optional[BackendType]:
     """返回当前默认 backend（用于日志/排查）"""
     return _BackendGlobal().get()
+
+
+def clear_llm_cache() -> None:
+    """清除 LLM 实例缓存
+    
+    当配置文件发生变化时，调用此函数清除缓存，使下次 get_llm() 重新读取配置。
+    """
+    _build_sync.cache_clear()
+    _build_async.cache_clear()
+    _logger.debug("LLM 实例缓存已清除")

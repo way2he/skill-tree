@@ -28,7 +28,7 @@ class LLMEvent:
     用于在 EventBus 中传递的统一事件载体。包含：
     - 调用元信息：provider（渠道）/ model（模型）/ backend（底层实现）/ method（方法）
     - 入参：prompt（提示词）/ params（kwargs 快照，已脱敏）
-    - 出参：response（生成结果）/ tokens_used / latency_ms
+    - 出参：response（生成结果）/ tokens_used / latency
     - 追踪：request_id（贯穿同一次调用的开始/结束事件）
     """
     event_type: EventType
@@ -41,7 +41,7 @@ class LLMEvent:
     prompt: Optional[str] = None
     params: Optional[Dict[str, Any]] = None
     response: Optional[str] = None
-    latency_ms: Optional[float] = None
+    latency: Optional[float] = None
     tokens_used: Optional[int] = None
     error: Optional[Exception] = None
     retry_attempt: Optional[int] = None

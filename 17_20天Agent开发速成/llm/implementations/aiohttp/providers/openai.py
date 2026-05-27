@@ -3,15 +3,16 @@
 异步 OpenAI API 客户端（兼容 Azure OpenAI）
 """
 
+import json
 import os
 from typing import Any, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncOpenAIClient(BaseAsyncLLMClient):
+class OpenAIProvider(BaseAsyncProviderClient):
     """
     异步 OpenAI API 客户端（兼容 Azure OpenAI）
 
@@ -24,10 +25,13 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "openai"
+    DEFAULT_MODEL = "gpt-4o-mini"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gpt-4o-mini",
+        model: str = DEFAULT_MODEL,
         base_url: str = "https://api.openai.com/v1",
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
@@ -50,16 +54,18 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
         messages.append({"role": "user", "content": prompt})
         return messages
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
+        messages = self._build_messages(prompt)
+
         payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": self._build_messages(prompt),
+            "model": kwargs.get("model", self.model),
+            "messages": messages,
             "temperature": kwargs.get("temperature", self.temperature),
         }
 
@@ -72,7 +78,7 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -83,8 +89,6 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
 
         messages = self._build_messages(prompt)
         if schema:
-            import json
-
             schema_str = json.dumps(schema, ensure_ascii=False)
             messages.append(
                 {
@@ -94,7 +98,7 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
             )
 
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": 0.3,
             "response_format": {"type": "json_object"},
@@ -109,7 +113,7 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（OpenAI 兼容 SSE，异步）"""
         import json as _json
         headers = {
@@ -118,7 +122,7 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
             "Accept": "text/event-stream",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": self._build_messages(prompt),
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
@@ -144,3 +148,8 @@ class AsyncOpenAIClient(BaseAsyncLLMClient):
                             yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncOpenAIClient(OpenAIProvider):
+    pass

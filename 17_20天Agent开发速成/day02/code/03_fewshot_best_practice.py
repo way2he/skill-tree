@@ -12,8 +12,11 @@ Day02 必写代码 3：Few-shot Learning 最佳实践
 """
 
 import sys
-sys.path.append("..")
-from llm.openai import chat_completion, get_response_content
+from pathlib import Path
+
+# 将项目根目录加入 sys.path，确保能导入 llm 库
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from llm.core import get_llm
 
 
 # ============================================================
@@ -60,8 +63,16 @@ GOOD_FEWSHOT = """
 # 数量原则：3-5 个最佳，>10 个反而降效
 # ============================================================
 def fewshot_with_n_examples(n: int, text: str) -> str:
-    """演示不同示例数量的效果"""
-    
+    """
+    演示不同示例数量的效果
+
+    Args:
+        n: 使用前 n 个示例
+        text: 待判断情感的文本
+
+    Returns:
+        str: 模型输出的情感判断结果
+    """
     all_examples = [
         ('"很满意！"', '正面'),
         ('"垃圾产品"', '负面'),
@@ -74,10 +85,10 @@ def fewshot_with_n_examples(n: int, text: str) -> str:
         ('"一般般"', '中性'),
         ('"无可挑剔"', '正面'),
     ]
-    
+
     selected = all_examples[:n]
     examples_text = "\n".join([f"  {e[0]} → {e[1]}" for e in selected])
-    
+
     prompt = f"""判断情感（正面/负面/中性）：
 
 示例：
@@ -85,21 +96,23 @@ def fewshot_with_n_examples(n: int, text: str) -> str:
 
 问题：{text}
 答案："""
-    
-    messages = [{"role": "user", "content": prompt}]
-    response = chat_completion(model="gpt-3.5-turbo", messages=messages)
-    return get_response_content(response)
+
+    try:
+        llm = get_llm()
+        return llm.generate(prompt=prompt, temperature=0.3)
+    except Exception as e:
+        return f"调用 LLM 失败: {e}"
 
 
 # ============================================================
 # 顺序原则：相似示例放最后（recency bias）
 # ============================================================
-def order_matters_demo():
+def order_matters_demo() -> None:
     """演示示例顺序对结果的影响"""
-    
+
     # 用户输入是负面评论
     user_input = '"物流慢、客服差、质量烂"'
-    
+
     # 错误顺序：负面示例在前，正面示例在后
     # → 模型可能因为「近因效应」更倾向输出正面
     wrong_order = """
@@ -111,7 +124,7 @@ def order_matters_demo():
 
 请判断：{user_input}
 """.format(user_input=user_input)
-    
+
     # 正确顺序：和用户输入相似的示例放最后
     correct_order = """
 1. "客服好棒" → 正面
@@ -122,7 +135,7 @@ def order_matters_demo():
 
 请判断：{user_input}
 """.format(user_input=user_input)
-    
+
     print("⚠️ 错误顺序（相似示例放前面）：可能输出错误")
     print("✅ 正确顺序（相似示例放最后）：准确率更高")
 
@@ -184,16 +197,16 @@ if __name__ == "__main__":
     print("=" * 60)
     print("📝 Few-shot Learning 最佳实践演示")
     print("=" * 60)
-    
+
     test_text = '"商品收到后发现有划痕，但客服态度很好，最终换货成功"'
-    
+
     print(f"\n测试输入：{test_text}\n")
-    
+
     # 不同示例数量对比
     for n in [1, 3, 5, 10]:
         print(f"--- {n} 个示例 ---")
         # result = fewshot_with_n_examples(n, test_text)
         # print(f"结果：{result}\n")
-    
+
     print("\n--- 顺序影响 ---")
     order_matters_demo()

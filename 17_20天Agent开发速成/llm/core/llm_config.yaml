@@ -7,8 +7,8 @@ default_backend: requests  # 全局默认底层实现：requests/aiohttp/openai_
 providers:
   ollama:
     provider_type: ollama
-    backend: requests
-    model: qwen3.5:4b
+    backend: native_sdk
+    model: qwen3.5:9b
 
   deepseek:
     provider_type: requests

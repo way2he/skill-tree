@@ -40,6 +40,7 @@ from .providers import (
     YiClient,
     SparkClient,
     MetaClient,
+    OllamaClient,
     create_openai_client,
 )
 
@@ -71,5 +72,6 @@ __all__ = [
     "YiClient",
     "SparkClient",
     "MetaClient",
+    "OllamaClient",
     "create_openai_client",
 ]

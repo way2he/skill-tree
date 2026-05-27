@@ -90,6 +90,7 @@ from .default import (
     resolve_provider,
     current_backend,
     resolve_provider_and_backend,
+    clear_llm_cache,
 )
 
 # 导出底层实现选择器（一键配置、Builder、Switcher）
@@ -124,16 +125,10 @@ from .adapter import (
     UnifiedAdapter,
 )
 
-# 导出适配器（向后兼容，已废弃）
+# 导出适配器基类（用于自定义适配器）
 from .adapter import (
     BaseLLMAdapter,
     BaseAsyncLLMAdapter,
-    RequestsLLMAdapter,
-    AioHttpLLMAdapter,
-    OpenAILLMAdapter,
-    AnthropicLLMAdapter,
-    OllamaLLMAdapter,
-    SDKLLMAdapter,
 )
 
 # 导出弹性机制
@@ -221,6 +216,7 @@ __all__ = [
     "resolve_provider",
     "current_backend",
     "resolve_provider_and_backend",
+    "clear_llm_cache",
     "ProviderName",
     "ProviderLike",
     # 底层实现选择器
@@ -241,15 +237,9 @@ __all__ = [
     "LLMResult",
     "StreamChunk",
     "UnifiedAdapter",
-    # 适配器（向后兼容，已废弃）
+    # 适配器基类（用于自定义适配器）
     "BaseLLMAdapter",
     "BaseAsyncLLMAdapter",
-    "RequestsLLMAdapter",
-    "AioHttpLLMAdapter",
-    "OpenAILLMAdapter",
-    "AnthropicLLMAdapter",
-    "OllamaLLMAdapter",
-    "SDKLLMAdapter",
     # 弹性机制 - 重试
     "RetryPolicy",
     "calculate_delay",

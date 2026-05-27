@@ -227,6 +227,22 @@ class UnifiedAdapter:
         self, prompt: str, model: str, method: str, kwargs: dict
     ) -> InvocationContext:
         """构建调用上下文"""
+        # 获取底层客户端类型信息
+        client_class = type(self._client)
+        client_type = client_class.__name__
+        
+        # 从客户端获取 backend 信息（如果可用）
+        backend = getattr(self._client, 'backend', None)
+        
+        # 如果没有显式设置 backend，从类名推断
+        if backend is None:
+            if 'aiohttp' in client_class.__module__.lower():
+                backend = 'aiohttp'
+            elif 'openai_sdk' in client_class.__module__.lower():
+                backend = 'openai_sdk'
+            else:
+                backend = 'requests'
+        
         return InvocationContext(
             provider=self.provider_name,
             model=model,
@@ -235,6 +251,8 @@ class UnifiedAdapter:
             start_time=time.perf_counter(),
             request_id=self._current_request_id or uuid.uuid4().hex,
             kwargs=kwargs,
+            backend=backend,
+            client_type=client_type,
         )
 
     def _fire_before(self, context: InvocationContext) -> None:
@@ -375,7 +393,7 @@ class UnifiedAdapter:
         """生成文本并返回完整响应对象"""
         start_time = time.perf_counter()
         content = self.generate(prompt, **kwargs)
-        latency_ms = (time.perf_counter() - start_time) * 1000
+        latency = (time.perf_counter() - start_time)
         return LLMResult(
             content=content,
             model=kwargs.get("model", self.default_model),
@@ -492,7 +510,7 @@ class UnifiedAdapter:
         """异步生成文本并返回完整响应对象"""
         start_time = time.perf_counter()
         content = await self.agenerate(prompt, **kwargs)
-        latency_ms = (time.perf_counter() - start_time) * 1000
+        latency = (time.perf_counter() - start_time)
         return LLMResult(
             content=content,
             model=kwargs.get("model", self.default_model),

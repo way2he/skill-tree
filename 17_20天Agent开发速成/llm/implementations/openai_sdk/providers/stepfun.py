@@ -18,11 +18,13 @@ class StepfunClient(OpenAICompatibleClient):
     官方文档: https://platform.stepfun.com/docs
 
     Attributes:
+        PROVIDER_NAME: 提供者名称
         DEFAULT_BASE_URL: 默认 API 基础地址
         DEFAULT_MODEL: 默认模型名称
         ENV_API_KEY: API Key 对应的环境变量名
     """
 
+    PROVIDER_NAME: str = "stepfun"
     DEFAULT_BASE_URL: str = "https://api.stepfun.com/v1"
     DEFAULT_MODEL: str = "step-2"
     ENV_API_KEY: str = "STEPFUN_API_KEY"
@@ -64,3 +66,7 @@ class StepfunClient(OpenAICompatibleClient):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+
+
+# Provider alias for factory registration
+StepfunProvider = StepfunClient

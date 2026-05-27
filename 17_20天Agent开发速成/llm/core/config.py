@@ -9,6 +9,11 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
+# 默认配置文件路径
+_CONFIG_DIR = Path(__file__).parent
+_CONFIG_FILE = _CONFIG_DIR / "llm_config.yaml"
+CONFIG_PATH = os.environ.get("LLM_CONFIG_PATH", str(_CONFIG_FILE))
+
 try:
     import yaml
     HAS_YAML = True

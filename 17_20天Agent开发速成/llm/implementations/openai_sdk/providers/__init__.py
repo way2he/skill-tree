@@ -5,7 +5,7 @@ llm.openai.providers - OpenAI 兼容协议客户端集合
 本模块导出所有兼容 OpenAI Chat Completions API 的客户端类，
 以及 create_openai_client 工厂函数用于快速创建客户端实例。
 
-支持的厂商（共18个）：
+支持的厂商（共19个）：
 - openai: OpenAI 官方
 - deepseek: DeepSeek 深度求索
 - qwen: 通义千问
@@ -24,27 +24,29 @@ llm.openai.providers - OpenAI 兼容协议客户端集合
 - yi: 零一万物
 - spark: 讯飞星火
 - meta: Meta Llama
+- ollama: Ollama 本地模型
 """
 
 from .base import OpenAICompatibleClient
-from .openai import OpenAIClient
-from .deepseek import DeepSeekClient
-from .qwen import QwenClient
-from .doubao import DoubaoClient
-from .glm import GLMClient
-from .kimi import KimiClient
-from .minimax import MiniMaxClient
-from .milm import MiLMClient
-from .together import TogetherClient
-from .xai import XAIClient
-from .mistral import MistralClient
-from .shangtang import ShangtangClient
-from .stepfun import StepfunClient
-from .tiangong import TiangongClient
-from .baichuan import BaichuanClient
-from .yi import YiClient
-from .spark import SparkClient
-from .meta import MetaClient
+from .openai import OpenAIClient, OpenAIProvider
+from .deepseek import DeepSeekClient, DeepSeekProvider
+from .qwen import QwenClient, QwenProvider
+from .doubao import DoubaoClient, DoubaoProvider
+from .glm import GLMClient, GLMProvider
+from .kimi import KimiClient, KimiProvider
+from .minimax import MiniMaxClient, MiniMaxProvider
+from .milm import MiLMClient, MiLMProvider
+from .together import TogetherClient, TogetherProvider
+from .xai import XAIClient, XAIProvider
+from .mistral import MistralClient, MistralProvider
+from .shangtang import ShangtangClient, ShangtangProvider
+from .stepfun import StepfunClient, StepfunProvider
+from .tiangong import TiangongClient, TiangongProvider
+from .baichuan import BaichuanClient, BaichuanProvider
+from .yi import YiClient, YiProvider
+from .spark import SparkClient, SparkProvider
+from .meta import MetaClient, MetaProvider
+from .ollama import OllamaClient, OllamaProvider
 
 
 # 厂商名（小写）到客户端类的映射表
@@ -67,6 +69,7 @@ _VENDOR_CLIENT_MAP: dict[str, type[OpenAICompatibleClient]] = {
     "yi": YiClient,
     "spark": SparkClient,
     "meta": MetaClient,
+    "ollama": OllamaClient,
 }
 
 
@@ -125,7 +128,7 @@ def create_openai_client(
 __all__ = [
     # 基类
     "OpenAICompatibleClient",
-    # 18个兼容客户端
+    # 19个兼容客户端
     "OpenAIClient",
     "DeepSeekClient",
     "QwenClient",
@@ -144,6 +147,27 @@ __all__ = [
     "YiClient",
     "SparkClient",
     "MetaClient",
+    "OllamaClient",
+    # Provider 别名（用于工厂注册）
+    "OpenAIProvider",
+    "DeepSeekProvider",
+    "QwenProvider",
+    "DoubaoProvider",
+    "GLMProvider",
+    "KimiProvider",
+    "MiniMaxProvider",
+    "MiLMProvider",
+    "TogetherProvider",
+    "XAIProvider",
+    "MistralProvider",
+    "ShangtangProvider",
+    "StepfunProvider",
+    "TiangongProvider",
+    "BaichuanProvider",
+    "YiProvider",
+    "SparkProvider",
+    "MetaProvider",
+    "OllamaProvider",
     # 工厂函数
     "create_openai_client",
     # 映射表

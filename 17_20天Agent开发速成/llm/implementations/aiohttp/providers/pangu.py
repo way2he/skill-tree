@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncPanguClient(BaseAsyncLLMClient):
+class PanguProvider(BaseAsyncProviderClient):
     """
     异步华为云盘古大模型客户端
 
@@ -25,10 +25,13 @@ class AsyncPanguClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "pangu"
+    DEFAULT_MODEL = "pangu-large"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "pangu-large",
+        model: str = DEFAULT_MODEL,
         base_url: Optional[str] = None,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
@@ -46,7 +49,15 @@ class AsyncPanguClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    def _build_messages(self, prompt: str) -> List[Dict[str, str]]:
+        """构建 OpenAI API 格式的消息列表"""
+        messages: List[Dict[str, str]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         # 华为云盘古 OpenAI 兼容接口
         headers = {
@@ -54,13 +65,10 @@ class AsyncPanguClient(BaseAsyncLLMClient):
             "Content-Type": "application/json",
         }
 
-        messages: List[Dict[str, str]] = []
-        if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages = self._build_messages(prompt)
 
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": kwargs.get("temperature", self.temperature),
         }
@@ -74,7 +82,7 @@ class AsyncPanguClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -97,7 +105,7 @@ class AsyncPanguClient(BaseAsyncLLMClient):
         messages.append({"role": "user", "content": prompt})
 
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": 0.3,
             "response_format": {"type": "json_object"},
@@ -112,7 +120,7 @@ class AsyncPanguClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（OpenAI 兼容 SSE，异步）"""
         import json as _json
         headers = {
@@ -121,7 +129,7 @@ class AsyncPanguClient(BaseAsyncLLMClient):
             "Accept": "text/event-stream",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": self._build_messages(prompt),
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
@@ -147,3 +155,8 @@ class AsyncPanguClient(BaseAsyncLLMClient):
                             yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncPanguClient(PanguProvider):
+    pass

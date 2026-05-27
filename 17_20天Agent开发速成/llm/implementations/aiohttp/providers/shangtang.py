@@ -9,10 +9,10 @@ from typing import Any, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncShangtangClient(BaseAsyncLLMClient):
+class ShangtangProvider(BaseAsyncProviderClient):
     """
     异步商汤科技客户端
 
@@ -24,10 +24,13 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "shangtang"
+    DEFAULT_MODEL = "SenseChat-5.5"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "SenseChat-5.5",
+        model: str = DEFAULT_MODEL,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         timeout: int = 60,
@@ -41,20 +44,25 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    def _build_messages(self, prompt: str) -> List[dict[str, str]]:
+        """构建 OpenAI API 格式的消息列表"""
+        messages: List[dict[str, str]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
-        messages: List[dict[str, str]] = []
-        if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages = self._build_messages(prompt)
 
         payload = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": kwargs.get("temperature", self.temperature),
         }
@@ -68,7 +76,7 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -91,7 +99,7 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": 0.3,
             "response_format": {"type": "json_object"},
@@ -106,7 +114,7 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（OpenAI 兼容 SSE，异步）"""
         import json as _json
         headers = {
@@ -115,7 +123,7 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
             "Accept": "text/event-stream",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": self._build_messages(prompt),
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
@@ -141,3 +149,8 @@ class AsyncShangtangClient(BaseAsyncLLMClient):
                             yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncShangtangClient(ShangtangProvider):
+    pass

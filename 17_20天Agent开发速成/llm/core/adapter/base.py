@@ -96,7 +96,7 @@ def publish_llm_event(
     prompt: str | None = None,
     response: str | None = None,
     error: Exception | None = None,
-    latency_ms: float | None = None,
+    latency: float | None = None,
     request_id: str | None = None,
 ) -> None:
     """发布 LLM 事件到 EventBus"""
@@ -122,7 +122,7 @@ def publish_llm_event(
             params={},
             response=response[:4096] if response else None,
             error=error,
-            latency_ms=latency_ms,
+            latency=latency,
         )
         publish(event)
     except ImportError:
@@ -174,7 +174,7 @@ def _build_start_event(self: Any, method: str, prompt: Any, kwargs: dict) -> _LL
     )
 
 
-def _publish_success(start_event: _LLMEvent, response: Any, latency_ms: float) -> None:
+def _publish_success(start_event: _LLMEvent, response: Any, latency: float) -> None:
     """发布 REQUEST_SUCCESS"""
     _publish_event(_LLMEvent(
         event_type=_EventType.REQUEST_SUCCESS,
@@ -186,11 +186,11 @@ def _publish_success(start_event: _LLMEvent, response: Any, latency_ms: float) -
         prompt=start_event.prompt,
         params=start_event.params,
         response=_safe_str(response) if response is not None else None,
-        latency_ms=latency_ms,
+        latency=latency,
     ))
 
 
-def _publish_failure(start_event: _LLMEvent, error: BaseException, latency_ms: float) -> None:
+def _publish_failure(start_event: _LLMEvent, error: BaseException, latency: float) -> None:
     """发布 REQUEST_FAILURE"""
     _publish_event(_LLMEvent(
         event_type=_EventType.REQUEST_FAILURE,
@@ -202,7 +202,7 @@ def _publish_failure(start_event: _LLMEvent, error: BaseException, latency_ms: f
         prompt=start_event.prompt,
         params=start_event.params,
         error=error if isinstance(error, Exception) else None,
-        latency_ms=latency_ms,
+        latency=latency,
     ))
 
 
@@ -223,11 +223,11 @@ def _instrument_sync_method(func: Any, method_name: str) -> Any:
                         pass
                     yield chunk
             except BaseException as e:
-                latency = (time.perf_counter() - t0) * 1000
+                latency = (time.perf_counter() - t0)
                 _publish_failure(start, e, latency)
                 raise
             else:
-                latency = (time.perf_counter() - t0) * 1000
+                latency = (time.perf_counter() - t0)
                 _publish_success(start, "".join(chunks), latency)
         return stream_wrapper
 
@@ -239,11 +239,11 @@ def _instrument_sync_method(func: Any, method_name: str) -> Any:
         try:
             result = func(self, prompt, *args, **kwargs)
         except BaseException as e:
-            latency = (time.perf_counter() - t0) * 1000
+            latency = (time.perf_counter() - t0)
             _publish_failure(start, e, latency)
             raise
         else:
-            latency = (time.perf_counter() - t0) * 1000
+            latency = (time.perf_counter() - t0)
             _publish_success(start, result, latency)
             return result
     return wrapper
@@ -266,11 +266,11 @@ def _instrument_async_method(func: Any, method_name: str) -> Any:
                         pass
                     yield chunk
             except BaseException as e:
-                latency = (time.perf_counter() - t0) * 1000
+                latency = (time.perf_counter() - t0)
                 _publish_failure(start, e, latency)
                 raise
             else:
-                latency = (time.perf_counter() - t0) * 1000
+                latency = (time.perf_counter() - t0)
                 _publish_success(start, "".join(chunks), latency)
         return async_stream_wrapper
 
@@ -282,11 +282,11 @@ def _instrument_async_method(func: Any, method_name: str) -> Any:
         try:
             result = await func(self, prompt, *args, **kwargs)
         except BaseException as e:
-            latency = (time.perf_counter() - t0) * 1000
+            latency = (time.perf_counter() - t0)
             _publish_failure(start, e, latency)
             raise
         else:
-            latency = (time.perf_counter() - t0) * 1000
+            latency = (time.perf_counter() - t0)
             _publish_success(start, result, latency)
             return result
     return async_wrapper
@@ -340,12 +340,12 @@ class BaseLLMAdapter(ABC):
         start_time = time.perf_counter()
         try:
             content = self.generate(prompt, **kwargs)
-            latency_ms = (time.perf_counter() - start_time) * 1000
+            latency = (time.perf_counter() - start_time)
             return LLMResponse(
                 content=content,
                 model=kwargs.get('model', self.default_model),
                 provider=self.provider_name,
-                latency_ms=latency_ms
+                latency=latency
             )
         except Exception as e:
             if isinstance(e, LLMError):
@@ -390,12 +390,12 @@ class BaseAsyncLLMAdapter(ABC):
         start_time = time.perf_counter()
         try:
             content = await self.generate(prompt, **kwargs)
-            latency_ms = (time.perf_counter() - start_time) * 1000
+            latency = (time.perf_counter() - start_time)
             return LLMResponse(
                 content=content,
                 model=kwargs.get('model', self.default_model),
                 provider=self.provider_name,
-                latency_ms=latency_ms
+                latency=latency
             )
         except Exception as e:
             if isinstance(e, LLMError):

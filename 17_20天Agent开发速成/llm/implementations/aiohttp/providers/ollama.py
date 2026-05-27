@@ -4,16 +4,16 @@
 """
 
 import os
-from typing import Any, Optional
+from typing import Any, Optional, AsyncIterator
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient, BaseAsyncLLMClient
 
 
-class AsyncOllamaClient(BaseAsyncLLMClient):
+class OllamaProvider(BaseAsyncProviderClient):
     """
-    异步 Ollama 本地模型客户端
+    异步 Ollama 本地模型 Provider
 
     Args:
         model: 模型名称
@@ -23,9 +23,12 @@ class AsyncOllamaClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME: str = "ollama"
+    DEFAULT_MODEL: str = "qwen3.5:4b"
+
     def __init__(
         self,
-        model: str = "qwen3.5:9b",
+        model: str = "qwen3.5:4b",
         base_url: str = "http://localhost:11434",
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
@@ -37,8 +40,8 @@ class AsyncOllamaClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
-        """生成文本回复"""
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
+        """异步生成文本回复"""
         payload: dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
@@ -56,10 +59,10 @@ class AsyncOllamaClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result.get("response", ""))
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
-        """生成 JSON 格式回复"""
+        """异步生成 JSON 格式回复"""
         payload: dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
@@ -83,8 +86,8 @@ class AsyncOllamaClient(BaseAsyncLLMClient):
                     raise ValueError("Ollama 返回的响应为空")
                 return response_str
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
-        """流式生成（Ollama NDJSON，异步）"""
+    async def agenerate_stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[str]:
+        """异步流式生成（Ollama NDJSON）"""
         import json as _json
         payload: dict[str, Any] = {
             "model": self.model,
@@ -112,3 +115,14 @@ class AsyncOllamaClient(BaseAsyncLLMClient):
                         yield piece
                     if obj.get("done"):
                         break
+
+
+# 向后兼容：保留旧的类名作为别名
+class AsyncOllamaClient(OllamaProvider):
+    """
+    向后兼容别名
+
+    旧代码使用 AsyncOllamaClient，新代码应使用 OllamaProvider。
+    """
+    pass
+

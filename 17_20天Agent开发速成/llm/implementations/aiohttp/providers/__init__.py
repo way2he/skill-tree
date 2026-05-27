@@ -12,38 +12,66 @@
 from .base import (
     AsyncLLMResponse,
     BaseAsyncLLMClient,
+    BaseAsyncProviderClient,
 )
-from .ollama import AsyncOllamaClient
-from .openai import AsyncOpenAIClient
-from .anthropic import AsyncAnthropicClient
-from .doubao import AsyncDoubaoClient
-from .qwen import AsyncQwenClient
-from .glm import AsyncGLMClient
-from .wenxin import AsyncWenxinClient
-from .kimi import AsyncKimiClient
-from .deepseek import AsyncDeepSeekClient
-from .minimax import AsyncMiniMaxClient
-from .xai import AsyncXAIClient
-from .cohere import AsyncCohereClient
-from .hunyuan import AsyncHunyuanOpenAIClient
-from .pangu import AsyncPanguClient
-from .mistral import AsyncMistralClient
-from .together import AsyncTogetherClient
-from .milm import AsyncMiLMClient
-from .google import AsyncGoogleClient
-from .meta import AsyncMetaClient
-from .shangtang import AsyncShangtangClient
-from .stepfun import AsyncStepfunClient
-from .tiangong import AsyncTiangongClient
-from .spark import AsyncSparkClient
-from .baichuan import AsyncBaichuanClient
-from .yi import AsyncYiClient
+from .ollama import OllamaProvider, AsyncOllamaClient
+from .openai import OpenAIProvider, AsyncOpenAIClient
+from .anthropic import AnthropicProvider, AsyncAnthropicClient
+from .doubao import DoubaoProvider, AsyncDoubaoClient
+from .qwen import QwenProvider, AsyncQwenClient
+from .glm import GLMProvider, AsyncGLMClient
+from .wenxin import WenxinProvider, AsyncWenxinClient
+from .kimi import KimiProvider, AsyncKimiClient
+from .deepseek import DeepSeekProvider, AsyncDeepSeekClient
+from .minimax import MiniMaxProvider, AsyncMiniMaxClient
+from .xai import XAIProvider, AsyncXAIClient
+from .cohere import CohereProvider, AsyncCohereClient
+from .hunyuan import HunyuanProvider, AsyncHunyuanOpenAIClient
+from .pangu import PanguProvider, AsyncPanguClient
+from .mistral import MistralProvider, AsyncMistralClient
+from .together import TogetherProvider, AsyncTogetherClient
+from .milm import MiLMProvider, AsyncMiLMClient
+from .google import GoogleProvider, AsyncGoogleClient
+from .meta import MetaProvider, AsyncMetaClient
+from .shangtang import ShangtangProvider, AsyncShangtangClient
+from .stepfun import StepfunProvider, AsyncStepfunClient
+from .tiangong import TiangongProvider, AsyncTiangongClient
+from .spark import SparkProvider, AsyncSparkClient
+from .baichuan import BaichuanProvider, AsyncBaichuanClient
+from .yi import YiProvider, AsyncYiClient
 
 __all__ = [
     # 基础类
     "AsyncLLMResponse",
     "BaseAsyncLLMClient",
-    # 厂商客户端
+    "BaseAsyncProviderClient",
+    # Provider 类（新）
+    "OllamaProvider",
+    "OpenAIProvider",
+    "AnthropicProvider",
+    "DoubaoProvider",
+    "QwenProvider",
+    "GLMProvider",
+    "WenxinProvider",
+    "KimiProvider",
+    "DeepSeekProvider",
+    "MiniMaxProvider",
+    "XAIProvider",
+    "CohereProvider",
+    "HunyuanProvider",
+    "PanguProvider",
+    "MistralProvider",
+    "TogetherProvider",
+    "MiLMProvider",
+    "GoogleProvider",
+    "MetaProvider",
+    "ShangtangProvider",
+    "StepfunProvider",
+    "TiangongProvider",
+    "SparkProvider",
+    "BaichuanProvider",
+    "YiProvider",
+    # 厂商客户端（向后兼容）
     "AsyncOllamaClient",
     "AsyncOpenAIClient",
     "AsyncAnthropicClient",
@@ -75,35 +103,35 @@ __all__ = [
 
 
 _CLIENT_MAP = {
-    "ollama": AsyncOllamaClient,
-    "openai": AsyncOpenAIClient,
-    "anthropic": AsyncAnthropicClient,
-    "doubao": AsyncDoubaoClient,
-    "qwen": AsyncQwenClient,
-    "glm": AsyncGLMClient,
-    "wenxin": AsyncWenxinClient,
-    "kimi": AsyncKimiClient,
-    "deepseek": AsyncDeepSeekClient,
-    "minimax": AsyncMiniMaxClient,
-    "xai": AsyncXAIClient,
-    "cohere": AsyncCohereClient,
-    "hunyuan": AsyncHunyuanOpenAIClient,
-    "pangu": AsyncPanguClient,
-    "mistral": AsyncMistralClient,
-    "together": AsyncTogetherClient,
-    "milm": AsyncMiLMClient,
-    "google": AsyncGoogleClient,
-    "meta": AsyncMetaClient,
-    "shangtang": AsyncShangtangClient,
-    "stepfun": AsyncStepfunClient,
-    "tiangong": AsyncTiangongClient,
-    "spark": AsyncSparkClient,
-    "baichuan": AsyncBaichuanClient,
-    "yi": AsyncYiClient,
+    "ollama": OllamaProvider,
+    "openai": OpenAIProvider,
+    "anthropic": AnthropicProvider,
+    "doubao": DoubaoProvider,
+    "qwen": QwenProvider,
+    "glm": GLMProvider,
+    "wenxin": WenxinProvider,
+    "kimi": KimiProvider,
+    "deepseek": DeepSeekProvider,
+    "minimax": MiniMaxProvider,
+    "xai": XAIProvider,
+    "cohere": CohereProvider,
+    "hunyuan": HunyuanProvider,
+    "pangu": PanguProvider,
+    "mistral": MistralProvider,
+    "together": TogetherProvider,
+    "milm": MiLMProvider,
+    "google": GoogleProvider,
+    "meta": MetaProvider,
+    "shangtang": ShangtangProvider,
+    "stepfun": StepfunProvider,
+    "tiangong": TiangongProvider,
+    "spark": SparkProvider,
+    "baichuan": BaichuanProvider,
+    "yi": YiProvider,
 }
 
 
-def create_client(provider: str, **kwargs) -> BaseAsyncLLMClient:
+def create_client(provider: str, **kwargs) -> BaseAsyncProviderClient:
     """异步 LLM 客户端工厂函数。
 
     Args:

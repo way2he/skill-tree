@@ -14,7 +14,7 @@ from ollama import Client, AsyncClient
 from .base import OllamaSDKBaseClient
 
 
-DEFAULT_MODEL: str = "qwen2.5:7b"
+DEFAULT_MODEL: str = "qwen3.5:4b"
 DEFAULT_HOST: str = "http://localhost:11434"
 
 

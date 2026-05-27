@@ -5,7 +5,7 @@
 业务自定义一个 client 类，注册进 llm.core，即可被 get_llm / create_llm 统一调度。
 
 运行：
-    py -3 -m llm.demo.demo_register
+    py -3 -m llm.examples.demo_register
 """
 
 import sys
@@ -18,10 +18,12 @@ if sys.platform.startswith("win"):
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 from llm.core import (
-    register_provider, register_async_provider,
-    create_llm, create_async_llm,
-    list_providers, list_async_providers,
-    RequestsLLMAdapter, AioHttpLLMAdapter,
+    register_provider,
+    register_async_provider,
+    create_llm,
+    create_async_llm,
+    list_providers,
+    list_async_providers,
 )
 
 
@@ -40,6 +42,7 @@ class EchoClient:
 
     def generate_json(self, prompt: str, schema=None, **kwargs: Any) -> str:
         import json as _json
+
         return _json.dumps({"echo": prompt, "schema": schema}, ensure_ascii=False)
 
     def generate_stream(self, prompt: str, **kwargs: Any) -> Iterator[str]:
@@ -60,6 +63,7 @@ class AsyncEchoClient:
 
     async def generate_json(self, prompt: str, schema=None, **kwargs: Any) -> str:
         import json as _json
+
         return _json.dumps({"echo": prompt, "schema": schema}, ensure_ascii=False)
 
     async def generate_stream(self, prompt: str, **kwargs: Any) -> AsyncGenerator[str, None]:
@@ -71,8 +75,9 @@ def main_sync():
     print("=== register_provider 演示 ===")
     print("注册前：", "echo" in list_providers())
 
-    # 注册（RequestsLLMAdapter 透传接口完全匹配的 client）
-    register_provider("echo", EchoClient, RequestsLLMAdapter)
+    # 注册自定义 Provider
+    # 注意：register_provider 只接受 name 和 provider_class 两个参数
+    register_provider("echo", EchoClient)
 
     print("注册后：", "echo" in list_providers())
 
@@ -87,11 +92,8 @@ async def main_async():
     print("\n=== register_async_provider 演示 ===")
     print("注册前：", "async-echo" in list_async_providers())
 
-    register_async_provider(
-        "async-echo",
-        AsyncEchoClient,                # 直接传类作为工厂（kwargs 透传）
-        AioHttpLLMAdapter,
-    )
+    # 注册自定义异步 Provider
+    register_async_provider("async-echo", AsyncEchoClient)
 
     print("注册后：", "async-echo" in list_async_providers())
 

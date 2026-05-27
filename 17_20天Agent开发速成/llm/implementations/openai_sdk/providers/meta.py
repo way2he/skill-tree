@@ -19,11 +19,13 @@ class MetaClient(OpenAICompatibleClient):
     Meta Llama 官方文档: https://llama.meta.com/
 
     Attributes:
+        PROVIDER_NAME: 提供者名称
         DEFAULT_BASE_URL: 默认 API 基础地址 (Together AI 端点)
         DEFAULT_MODEL: 默认模型名称
         ENV_API_KEY: API Key 对应的环境变量名 (Together AI)
     """
 
+    PROVIDER_NAME: str = "meta"
     DEFAULT_BASE_URL: str = "https://api.together.xyz/v1"
     DEFAULT_MODEL: str = "meta-llama/Llama-3-70b-chat-hf"
     ENV_API_KEY: str = "TOGETHER_API_KEY"
@@ -65,3 +67,7 @@ class MetaClient(OpenAICompatibleClient):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+
+
+# Provider alias for factory registration
+MetaProvider = MetaClient

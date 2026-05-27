@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncXAIClient(BaseAsyncLLMClient):
+class XAIProvider(BaseAsyncProviderClient):
     """
     异步 xAI / Grok API 客户端
 
@@ -25,10 +25,13 @@ class AsyncXAIClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "xai"
+    DEFAULT_MODEL = "grok-3-beta"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "grok-3-beta",
+        model: str = DEFAULT_MODEL,
         base_url: str = "https://api.x.ai/v1",
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
@@ -51,7 +54,7 @@ class AsyncXAIClient(BaseAsyncLLMClient):
         messages.append({"role": "user", "content": prompt})
         return messages
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -59,7 +62,7 @@ class AsyncXAIClient(BaseAsyncLLMClient):
         }
 
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": self._build_messages(prompt),
             "temperature": kwargs.get("temperature", self.temperature),
         }
@@ -73,7 +76,7 @@ class AsyncXAIClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -93,7 +96,7 @@ class AsyncXAIClient(BaseAsyncLLMClient):
             )
 
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": 0.3,
             "response_format": {"type": "json_object"},
@@ -108,7 +111,7 @@ class AsyncXAIClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["choices"][0]["message"]["content"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（OpenAI 兼容 SSE，异步）"""
         import json as _json
         headers = {
@@ -117,7 +120,7 @@ class AsyncXAIClient(BaseAsyncLLMClient):
             "Accept": "text/event-stream",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": self._build_messages(prompt),
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
@@ -143,3 +146,8 @@ class AsyncXAIClient(BaseAsyncLLMClient):
                             yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncXAIClient(XAIProvider):
+    pass

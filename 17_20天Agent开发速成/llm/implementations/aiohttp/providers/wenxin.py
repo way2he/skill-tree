@@ -9,10 +9,10 @@ from typing import Any, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncWenxinClient(BaseAsyncLLMClient):
+class WenxinProvider(BaseAsyncProviderClient):
     """
     异步百度文心一言客户端
 
@@ -24,10 +24,13 @@ class AsyncWenxinClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "wenxin"
+    DEFAULT_MODEL = "ernie-4.0-turbo-128k"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "ernie-4.0-turbo-128k",
+        model: str = DEFAULT_MODEL,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         timeout: int = 60,
@@ -41,7 +44,7 @@ class AsyncWenxinClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {"Content-Type": "application/json"}
 
@@ -68,7 +71,7 @@ class AsyncWenxinClient(BaseAsyncLLMClient):
                     raise Exception(f"文心一言 API 错误: {result}")
                 return str(result.get("result", ""))
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -102,7 +105,7 @@ class AsyncWenxinClient(BaseAsyncLLMClient):
                     raise Exception(f"文心一言 API 错误: {result}")
                 return str(result.get("result", ""))
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（文心 SSE：data: {"result": "...", "is_end": bool}，异步）"""
         import json as _json
         url = f"{self.base_url}/{self.model}?access_token={self.api_key}"
@@ -139,3 +142,8 @@ class AsyncWenxinClient(BaseAsyncLLMClient):
                             break
                     except _json.JSONDecodeError:
                         continue
+
+
+# 向后兼容别名
+class AsyncWenxinClient(WenxinProvider):
+    pass

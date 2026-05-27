@@ -744,14 +744,13 @@ def _create_client_from_config(config: BackendConfig, async_mode: bool = False):
         async_mode: 是否创建异步客户端
 
     Returns:
-        LLM 适配器实例
+        LLM 适配器实例（UnifiedAdapter）
 
     Raises:
         LLMConfigError: 配置错误
         LLMProviderNotFoundError: 厂商未注册
     """
-    from .factory import _registry
-    from .adapter import BaseLLMAdapter, BaseAsyncLLMAdapter
+    from .factory import create_llm, create_async_llm
 
     # 验证厂商名称
     if not config.provider:
@@ -766,52 +765,25 @@ def _create_client_from_config(config: BackendConfig, async_mode: bool = False):
         is_async=async_mode
     )
 
-    # 生成注册表键
-    registry_key = _get_registry_key(provider_name, final_backend)
-
-    # 根据模式选择注册表
-    if async_mode:
-        if registry_key not in _registry._async_registry:
-            raise LLMProviderNotFoundError(
-                f"异步提供者未注册: {provider_name} (backend={final_backend.value})",
-                provider=provider_name
-            )
-        entry = _registry._async_registry[registry_key]
-    else:
-        if registry_key not in _registry._sync_registry:
-            raise LLMProviderNotFoundError(
-                f"同步提供者未注册: {provider_name} (backend={final_backend.value})",
-                provider=provider_name
-            )
-        entry = _registry._sync_registry[registry_key]
-
-    # 创建客户端
-    client_factory = entry["client_factory"]
-    adapter_class = entry["adapter_class"]
-
+    # 从配置读取参数
     kwargs = config.to_kwargs()
-    client = client_factory(**kwargs)
 
-    # 创建适配器
-    return adapter_class(client, provider_name=provider_name)
+    # 使用 factory 模块创建客户端
+    if async_mode:
+        return create_async_llm(
+            provider_name,
+            implementation=final_backend.value,
+            **kwargs
+        )
+    else:
+        return create_llm(
+            provider_name,
+            implementation=final_backend.value,
+            **kwargs
+        )
 
 
-def _get_registry_key(provider: str, backend: BackendType) -> str:
-    """
-    生成注册表键名
 
-    Args:
-        provider: 厂商名称
-        backend: 实现类型
-
-    Returns:
-        注册表键名
-    """
-    # 格式：{provider}:{backend} 或 {provider}（默认 requests）
-    if backend == BackendType.REQUESTS:
-        # requests 是默认实现，使用原始键名
-        return provider
-    return f"{provider}:{backend.value}"
 
 
 # =============================================================================

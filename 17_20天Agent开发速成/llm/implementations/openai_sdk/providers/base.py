@@ -25,7 +25,25 @@ class OpenAICompatibleClient(ABC):
         system_prompt: 系统提示词
         temperature: 温度参数 (0-2)
         max_tokens: 最大输出 token 数
+
+    Attributes:
+        PROVIDER_NAME: 厂商名称（子类必须定义）
+        DEFAULT_MODEL: 默认模型名称（子类必须定义）
     """
+
+    # 子类必须定义
+    PROVIDER_NAME: str = ""
+    DEFAULT_MODEL: str = ""
+
+    @property
+    def provider_name(self) -> str:
+        """厂商名称"""
+        return self.PROVIDER_NAME
+
+    @property
+    def default_model(self) -> str:
+        """默认模型"""
+        return getattr(self, "model", None) or self.DEFAULT_MODEL
 
     def __init__(
         self,

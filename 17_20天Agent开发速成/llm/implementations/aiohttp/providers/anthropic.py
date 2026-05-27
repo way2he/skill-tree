@@ -9,10 +9,10 @@ from typing import Any, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncAnthropicClient(BaseAsyncLLMClient):
+class AnthropicProvider(BaseAsyncProviderClient):
     """
     异步 Anthropic Claude API 客户端
 
@@ -24,10 +24,13 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "anthropic"
+    DEFAULT_MODEL = "claude-sonnet-4-20250514"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = DEFAULT_MODEL,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         timeout: int = 60,
@@ -41,7 +44,7 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {
             "x-api-key": self.api_key or "",
@@ -50,7 +53,7 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
         }
 
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "max_tokens": kwargs.get("max_tokens", 4096),
             "temperature": kwargs.get("temperature", self.temperature),
             "system": self.system_prompt or "",
@@ -66,7 +69,7 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["content"][0]["text"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -84,7 +87,7 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
             json_instruction = "\n\n请以有效的 JSON 格式输出响应。"
 
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "max_tokens": kwargs.get("max_tokens", 4096),
             "temperature": 0.3,
             "system": (self.system_prompt or "") + json_instruction,
@@ -100,7 +103,7 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["content"][0]["text"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（Anthropic SSE，异步）"""
         import json as _json
         headers = {
@@ -110,7 +113,7 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
             "Accept": "text/event-stream",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "max_tokens": kwargs.get("max_tokens", 4096),
             "temperature": kwargs.get("temperature", self.temperature),
             "system": self.system_prompt or "",
@@ -138,3 +141,8 @@ class AsyncAnthropicClient(BaseAsyncLLMClient):
                             yield piece
                     elif obj.get("type") == "message_stop":
                         break
+
+
+# 向后兼容别名
+class AsyncAnthropicClient(AnthropicProvider):
+    pass

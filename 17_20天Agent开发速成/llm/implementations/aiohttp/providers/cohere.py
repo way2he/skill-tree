@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncCohereClient(BaseAsyncLLMClient):
+class CohereProvider(BaseAsyncProviderClient):
     """
     异步 Cohere API 客户端
 
@@ -25,10 +25,13 @@ class AsyncCohereClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "cohere"
+    DEFAULT_MODEL = "command-r-plus-08-2024"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "command-r-plus-08-2024",
+        model: str = DEFAULT_MODEL,
         base_url: str = "https://api.cohere.com/v1",
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
@@ -43,20 +46,25 @@ class AsyncCohereClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    def _build_messages(self, prompt: str) -> List[Dict[str, str]]:
+        """构建消息列表"""
+        messages: List[Dict[str, str]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
-        messages: List[Dict[str, str]] = []
-        if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages = self._build_messages(prompt)
 
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": kwargs.get("temperature", self.temperature),
         }
@@ -70,7 +78,7 @@ class AsyncCohereClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["text"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -82,7 +90,7 @@ class AsyncCohereClient(BaseAsyncLLMClient):
         messages: List[Dict[str, str]] = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
-        
+
         if schema:
             schema_str = json.dumps(schema, ensure_ascii=False)
             messages.append(
@@ -94,7 +102,7 @@ class AsyncCohereClient(BaseAsyncLLMClient):
         messages.append({"role": "user", "content": prompt})
 
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "messages": messages,
             "temperature": 0.3,
         }
@@ -108,7 +116,7 @@ class AsyncCohereClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["text"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（Cohere v1/chat NDJSON，异步）"""
         import json as _json
         headers = {
@@ -118,7 +126,7 @@ class AsyncCohereClient(BaseAsyncLLMClient):
             "Accept": "application/json",
         }
         payload: dict[str, Any] = {
-            "model": self.model,
+            "model": kwargs.get("model", self.model),
             "message": prompt,
             "temperature": kwargs.get("temperature", self.temperature),
             "preamble": self.system_prompt,
@@ -144,3 +152,8 @@ class AsyncCohereClient(BaseAsyncLLMClient):
                             yield piece
                     elif obj.get("event_type") == "stream-end":
                         break
+
+
+# 向后兼容别名
+class AsyncCohereClient(CohereProvider):
+    pass

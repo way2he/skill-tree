@@ -9,10 +9,10 @@ from typing import Any, List, Optional
 
 import aiohttp
 
-from .base import BaseAsyncLLMClient
+from .base import BaseAsyncProviderClient
 
 
-class AsyncGoogleClient(BaseAsyncLLMClient):
+class GoogleProvider(BaseAsyncProviderClient):
     """
     异步 Google Gemini 客户端
 
@@ -24,10 +24,13 @@ class AsyncGoogleClient(BaseAsyncLLMClient):
         timeout: 请求超时时间（秒）
     """
 
+    PROVIDER_NAME = "google"
+    DEFAULT_MODEL = "gemini-1.5-pro"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-1.5-pro",
+        model: str = DEFAULT_MODEL,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         timeout: int = 60,
@@ -41,7 +44,7 @@ class AsyncGoogleClient(BaseAsyncLLMClient):
         self.temperature = temperature
         self.timeout = timeout
 
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
+    async def agenerate(self, prompt: str, **kwargs: Any) -> str:
         """生成文本回复"""
         url = f"{self.base_url}?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
@@ -62,7 +65,7 @@ class AsyncGoogleClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["candidates"][0]["content"]["parts"][0]["text"])
 
-    async def generate_json(
+    async def agenerate_json(
         self, prompt: str, schema: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> str:
         """生成 JSON 格式回复"""
@@ -91,7 +94,7 @@ class AsyncGoogleClient(BaseAsyncLLMClient):
                 result = await response.json()
                 return str(result["candidates"][0]["content"]["parts"][0]["text"])
 
-    async def generate_stream(self, prompt: str, **kwargs: Any):
+    async def agenerate_stream(self, prompt: str, **kwargs: Any):
         """流式生成（Gemini :streamGenerateContent + SSE，异步）"""
         import json as _json
         stream_url = self.base_url.replace(":generateContent", ":streamGenerateContent")
@@ -132,3 +135,8 @@ class AsyncGoogleClient(BaseAsyncLLMClient):
                                 yield piece
                     except (_json.JSONDecodeError, KeyError, IndexError):
                         continue
+
+
+# 向后兼容别名
+class AsyncGoogleClient(GoogleProvider):
+    pass

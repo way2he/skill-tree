@@ -18,11 +18,13 @@ class SparkClient(OpenAICompatibleClient):
     官方文档: https://www.xfyun.cn/doc/spark/
 
     Attributes:
+        PROVIDER_NAME: 提供者名称
         DEFAULT_BASE_URL: 默认 API 基础地址
         DEFAULT_MODEL: 默认模型名称
         ENV_API_KEY: API Key 对应的环境变量名
     """
 
+    PROVIDER_NAME: str = "spark"
     DEFAULT_BASE_URL: str = "https://spark-api.xf-yun.com/v1"
     DEFAULT_MODEL: str = "spark-4.0-ultra"
     ENV_API_KEY: str = "XUNFEI_API_KEY"
@@ -64,3 +66,7 @@ class SparkClient(OpenAICompatibleClient):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+
+
+# Provider alias for factory registration
+SparkProvider = SparkClient
