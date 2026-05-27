@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -11,8 +12,15 @@ Day02 必写代码 1：角色设定方法论
 """
 
 import sys
-sys.path.append("..")
-from llm.ollama.client import OllamaOfficialClient
+import io
+from pathlib import Path
+
+if sys.platform.startswith("win"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from llm.core import get_llm
 
 
 # ============================================================
@@ -80,7 +88,7 @@ def get_user(user_id):
 """
 
 
-def review_code(system_prompt: str, code: str, model: str = "qwen3.5:9b") -> str:
+def review_code(system_prompt, code, model="qwen3.5:9b"):
     """
     用指定的 system prompt 审查代码
     
@@ -92,40 +100,35 @@ def review_code(system_prompt: str, code: str, model: str = "qwen3.5:9b") -> str
     Returns:
         str: 模型返回的审查结果
     """
-    # 初始化 Ollama 客户端
-    client = OllamaOfficialClient()
-    
-    # 构建消息列表
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"请审查这段代码：\n{code}"}
-    ]
-    
-    # 调用 Ollama chat API
-    response = client.chat(messages=messages, temperature=0.3)
-    return response
+    try:
+        llm = get_llm()
+        full_prompt = f"请审查这段代码：\n{code}"
+        response = llm.generate(
+            prompt=full_prompt,
+            system=system_prompt,
+            model=model,
+            temperature=0.3
+        )
+        return response
+    except Exception as e:
+        return f"调用 LLM 失败: {str(e)}"
 
 
-def compare_prompts():
-    """对比三种 Prompt 的效果"""
-    print("=" * 60)
-    print("📝 同一段代码，三种 Prompt 的对比")
-    print("=" * 60)
-    
+def compare_prompts(): 
     print("\n❌ 坏的 Prompt（欠拟合）：")
     print(f"  {BAD_PROMPT}\n")
-    # result1 = review_code(BAD_PROMPT, TEST_CODE)
-    # print(f"  输出（预期：很发散，没有结构）：\n{result1}\n")
+    result1 = review_code(BAD_PROMPT, TEST_CODE)
+    print(f"  输出（预期：很发散，没有结构）：\n{result1}\n")
     
     print("\n❌ 过拟合的 Prompt：")
     print(f"  {OVERFIT_PROMPT[:100]}...\n")
-    # result2 = review_code(OVERFIT_PROMPT, TEST_CODE)
-    # print(f"  输出（预期：可能编造bug凑数）：\n{result2}\n")
+    result2 = review_code(OVERFIT_PROMPT, TEST_CODE)
+    print(f"  输出（预期：可能编造bug凑数）：\n{result2}\n")
     
     print("\n✅ 好的 Prompt（黄金五要素）：")
     print(f"  长度：{len(GOOD_PROMPT)} 字符")
-    # result3 = review_code(GOOD_PROMPT, TEST_CODE)
-    # print(f"  输出（预期：结构化、准确、可执行）：\n{result3}\n")
+    result3 = review_code(GOOD_PROMPT, TEST_CODE)
+    print(f"  输出（预期：结构化、准确、可执行）：\n{result3}\n")
 
 
 # ⭐ 面试官追问：为什么要给大模型设定角色？
@@ -168,7 +171,12 @@ GOLDEN_FORMULA = """
 
 
 if __name__ == "__main__":
-    compare_prompts()
-    print("\n" + "=" * 60)
-    print(GOLDEN_FORMULA)
-    print("=" * 60)
+    # compare_prompts()
+    # print("\n" + "=" * 60)
+    # print(GOLDEN_FORMULA)
+    # print("=" * 60)
+
+    # 零参数调用 - 系统自动选择提供商
+    llm = get_llm()
+    result = llm.generate("你好")
+    print(result)

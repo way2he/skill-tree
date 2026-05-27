@@ -130,28 +130,18 @@ def resolve_provider_and_backend(
 @lru_cache(maxsize=16)
 def _build_sync(name: str, backend: Optional[str] = None):
     """构建同步 LLM 实例"""
+    # 使用 factory 模块的 create_llm 函数创建实例
     if backend:
-        # 使用指定 backend 创建
-        registry_key = name if backend == "requests" else f"{name}:{backend}"
-        if registry_key in _registry._sync_registry:
-            entry = _registry._sync_registry[registry_key]
-            client = entry["client_factory"]()
-            return entry["adapter_class"](client, provider_name=name)
-    # 使用默认方式创建
+        return create_llm(name, implementation=backend)
     return create_llm(name)
 
 
 @lru_cache(maxsize=16)
 def _build_async(name: str, backend: Optional[str] = None):
     """构建异步 LLM 实例"""
+    # 使用 factory 模块的 create_async_llm 函数创建实例
     if backend:
-        # 使用指定 backend 创建
-        registry_key = name if backend == "requests" else f"{name}:{backend}"
-        if registry_key in _registry._async_registry:
-            entry = _registry._async_registry[registry_key]
-            client = entry["client_factory"]()
-            return entry["adapter_class"](client, provider_name=name)
-    # 使用默认方式创建
+        return create_async_llm(name, implementation=backend)
     return create_async_llm(name)
 
 

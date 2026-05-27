@@ -323,11 +323,14 @@ def create_default_chain() -> InterceptorChain:
     """
     创建默认拦截器链
 
-    包含 EventInterceptor（复用现有事件系统）。
+    包含：
+    - LoggingInterceptor: 在控制台输出模型调用日志
+    - EventInterceptor: 发布事件到 EventBus（复用现有事件系统）
 
     Returns:
         配置好默认拦截器的 InterceptorChain
     """
     chain = InterceptorChain()
+    chain.add(LoggingInterceptor())
     chain.add(EventInterceptor())
     return chain
