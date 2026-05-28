@@ -240,6 +240,8 @@ class UnifiedAdapter:
                 backend = 'aiohttp'
             elif 'openai_sdk' in client_class.__module__.lower():
                 backend = 'openai_sdk'
+            elif 'native' in client_type.lower():
+                backend = 'native_sdk'
             else:
                 backend = 'requests'
         

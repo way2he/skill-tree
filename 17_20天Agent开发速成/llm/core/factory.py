@@ -393,6 +393,40 @@ def _try_register_implementation(implementation: str) -> None:
         elif implementation == "doubao_sdk":
             from llm.implementations.doubao_sdk.providers.doubao import DoubaoProvider
             register_provider("doubao", DoubaoProvider)
+        
+        elif implementation == "native_sdk":
+            from llm.implementations.ollama import OllamaOfficialClient
+            
+            class OllamaNativeProvider:
+                """包装 Ollama 官方 SDK 客户端，使其符合 IProviderClient 接口"""
+                PROVIDER_NAME = "ollama"
+                DEFAULT_MODEL = "qwen3.5:9b"
+                
+                def __init__(self, model: str = DEFAULT_MODEL, host: str = None, **kwargs):
+                    self._client = OllamaOfficialClient(model=model, host=host, **kwargs)
+                    self.model = model
+                
+                @property
+                def provider_name(self) -> str:
+                    return self.PROVIDER_NAME
+                
+                @property
+                def default_model(self) -> str:
+                    return self.model
+                
+                def generate(self, prompt: str, **kwargs) -> str:
+                    return self._client.generate(prompt, **kwargs)
+                
+                def generate_stream(self, prompt: str, **kwargs):
+                    return self._client.generate_stream(prompt, **kwargs)
+                
+                async def agenerate(self, prompt: str, **kwargs) -> str:
+                    return await self._client.generate(prompt, **kwargs)
+                
+                async def agenerate_stream(self, prompt: str, **kwargs):
+                    return self._client.generate_stream(prompt, **kwargs)
+            
+            register_provider("ollama", OllamaNativeProvider)
     
     except ImportError as e:
         _logger.warning("实现方式导入失败: implementation=%s error=%s", implementation, e)
