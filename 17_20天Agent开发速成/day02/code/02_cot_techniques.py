@@ -206,14 +206,15 @@ CoT 有效的核心原因有 3 个：
 
 
 if __name__ == "__main__":
-    question = "一个班 30 个学生，其中 60% 是女生，男生比女生少几个？"
+        # 启用 LLM 调用日志
+    from llm.core import enable_logging, clear_llm_cache
+    enable_logging(level="DEBUG")  # 开启日志
+    
+    # 清除缓存，确保从配置文件重新读取参数
+    clear_llm_cache()
 
-    print("=" * 60)
-    print(f"问题：{question}")
-    print("=" * 60)
-
-    print("\n🎯 技巧 1：Zero-shot CoT")
-    print(cot_zero_shot(question))
+    # print("\n🎯 技巧 1：Zero-shot CoT")
+    # print(cot_zero_shot(question))
 
     # print("\n🎯 技巧 2：Few-shot CoT")
     # print(cot_few_shot(question))
@@ -223,8 +224,8 @@ if __name__ == "__main__":
     # print(f"最终答案：{result['final_answer']}")
     # print(f"置信度：{result['confidence']:.0%}")
 
-    # print("\n🎯 技巧 4：分步求解（复杂任务）")
-    # complex_q = "如果地球人口每年增长 1.1%，现在 80 亿，多少年后会达到 100 亿？"
-    # print(cot_decomposition(complex_q))
+    print("\n🎯 技巧 4：分步求解（复杂任务）")
+    complex_q = "如果地球人口每年增长 1.1%，现在 80 亿，多少年后会达到 100 亿？"
+    print(cot_decomposition(complex_q))
 
     when_not_to_use_cot()
