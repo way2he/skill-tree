@@ -118,15 +118,15 @@ def compare_prompts():
     result1 = review_code(BAD_PROMPT, TEST_CODE)
     print(f"  输出（预期：很发散，没有结构）：\n{result1}\n")
     
-    print("\n❌ 过拟合的 Prompt：")
-    print(f"  {OVERFIT_PROMPT[:100]}...\n")
-    result2 = review_code(OVERFIT_PROMPT, TEST_CODE)
-    print(f"  输出（预期：可能编造bug凑数）：\n{result2}\n")
+    # print("\n❌ 过拟合的 Prompt：")
+    # print(f"  {OVERFIT_PROMPT[:100]}...\n")
+    # result2 = review_code(OVERFIT_PROMPT, TEST_CODE)
+    # print(f"  输出（预期：可能编造bug凑数）：\n{result2}\n")
     
-    print("\n✅ 好的 Prompt（黄金五要素）：")
-    print(f"  长度：{len(GOOD_PROMPT)} 字符")
-    result3 = review_code(GOOD_PROMPT, TEST_CODE)
-    print(f"  输出（预期：结构化、准确、可执行）：\n{result3}\n")
+    # print("\n✅ 好的 Prompt（黄金五要素）：")
+    # print(f"  长度：{len(GOOD_PROMPT)} 字符")
+    # result3 = review_code(GOOD_PROMPT, TEST_CODE)
+    # print(f"  输出（预期：结构化、准确、可执行）：\n{result3}\n")
 
 
 # ⭐ 面试官追问：为什么要给大模型设定角色？
@@ -169,18 +169,14 @@ GOLDEN_FORMULA = """
 
 
 if __name__ == "__main__":
-    # compare_prompts()
-    # print("\n" + "=" * 60)
-    # print(GOLDEN_FORMULA)
-    # print("=" * 60)
-    
     # 启用 LLM 调用日志
     from llm.core import enable_logging, clear_llm_cache
     enable_logging(level="DEBUG")  # 开启日志
     
     # 清除缓存，确保从配置文件重新读取参数
     clear_llm_cache()
-    # 零参数调用 - 系统自动选择提供商（从配置文件读取模型）
-    llm = get_llm()
-    result = llm.generate("你好")
-    print(result)
+    compare_prompts()
+    print("\n" + "=" * 60)
+    print(GOLDEN_FORMULA)
+    print("=" * 60)
+    

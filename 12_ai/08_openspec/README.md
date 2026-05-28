@@ -5,7 +5,7 @@ type: index
 tags: ["OpenSpec", "SDD", "规范驱动开发", "学习计划", "AI编程"]
 summary: OpenSpec 7 天学习计划主入口，覆盖工具上手、方法论吃透、对比研究与实战集成三个阶段
 created_at: 2026-05-27
-updated_at: 2026-05-27
+updated_at: 2026-05-28
 ---
 
 # 🚀 OpenSpec 7 天学习计划
@@ -23,7 +23,7 @@ updated_at: 2026-05-27
 2. ✅ 理解 SDD（规范驱动开发）思想，能向他人讲清「为什么需要」
 3. ✅ 在 Claude Code / Cursor / Trae 等 AI 编辑器中配置并使用 OpenSpec
 4. ✅ 对比 OpenSpec / Spec-Kit / 裸 prompt 三种方案，做出合理选型
-5. ✅ 把 OpenSpec 集成进真实项目（demo：`kb_git_commit.py` 升级）
+5. ✅ 把 OpenSpec 集成进真实项目（demo：Markdown TODO 解析器）
 
 ---
 
@@ -35,11 +35,12 @@ updated_at: 2026-05-27
 | Day 2 | 🟢 A·上手 | [02-命令速查](./02-命令速查.md) | ✅ 完成 | 90 |
 | Day 3 | 🟡 B·方法论 | [03-SDD方法论](./03-SDD方法论.md) | ✅ 完成 | 92 |
 | Day 4 | 🟡 B·方法论 | [04-Change工作流详解](./04-Change工作流详解.md) | ✅ 完成 | 94 |
-| Day 5 | 🟡 B·方法论 | [05-AI工具集成](./05-AI工具集成.md) | ⏳ 未开始 | — |
-| Day 6 | 🔴 C·对比 | [06-与SpecKit横评](./06-与SpecKit横评.md) | ⏳ 未开始 | — |
-| Day 7 | 🔴 C·实战 | [07-实战集成案例](./07-实战集成案例.md) | ⏳ 未开始 | — |
+| Day 5 | 🟡 B·方法论 | [05-AI工具集成](./05-AI工具集成.md) | ✅ 完成 | 91 |
+| Day 6 | 🔴 C·对比 | [06-与SpecKit横评](./06-与SpecKit横评.md) | ✅ 完成 | 90 |
 
-**总耗时**：17.5 小时（可碎片化分摊 7 个工作日）
+**总耗时**：约 15 小时（可碎片化分摊 6 个工作日）
+
+> ⚠️ 原 Day 7「07-实战集成案例」已废弃（依赖工具不存在）。
 
 ---
 
@@ -54,9 +55,8 @@ updated_at: 2026-05-27
 - **[04-Change工作流详解](./04-Change工作流详解.md)** — proposal/spec/design/tasks/archive 五阶段深挖
 - **[05-AI工具集成](./05-AI工具集成.md)** — Claude Code/Cursor/Trae/Codex 集成对比
 
-### 🔴 阶段 C：对比与实战（Day 6-7）
+### 🔴 阶段 C：对比（Day 6）
 - **[06-与SpecKit横评](./06-与SpecKit横评.md)** — OpenSpec vs Spec-Kit vs 裸 prompt 对比矩阵
-- **[07-实战集成案例](./07-实战集成案例.md)** — 集成进 `kb_git_commit.py` 实测
 
 ### 📚 配套资料
 - [FAQ](./FAQ.md) — 10 个常见问题汇总
@@ -71,11 +71,6 @@ updated_at: 2026-05-27
 - 🎯 ~200 行 Python 工具，完整走通 OpenSpec 4 个 change 流程
 - 🚀 Day 1 启动，贯穿 Day 1-2
 
-### Demo B：kb_git_commit.py 升级
-- 📁 `demo/kb-git-commit-upgrade/`
-- 🎯 用 OpenSpec 给现有工具规划 3 个 change（不强求实现）
-- 🚀 Day 7 实战
-
 ---
 
 ## ✅ 验收标准
@@ -84,9 +79,9 @@ updated_at: 2026-05-27
 - Frontmatter 完整、至少 1 个代码示例 + 1 张流程图、末尾「相关阅读」、质量评分 ≥ 80
 
 整体：
-- 7 篇 + README + FAQ + 面试题全齐
-- 2 个 demo 可运行
-- 最终 commit 一次（`python kb_git_commit.py`）
+- 6 篇 + README + FAQ + 面试题全齐
+- 1 个 demo（Markdown TODO 解析器）可运行
+- 最终 commit 一次（原生 `git` 命令）
 
 ---
 
